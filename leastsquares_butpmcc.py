@@ -46,7 +46,6 @@ lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
 #data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'      # directory where data is located
 data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
 
-
 # same parameters as PMCC
 # Filtering
 FMIN = 0.1  # [Hz]
