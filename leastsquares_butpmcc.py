@@ -1,7 +1,13 @@
-#Least Squares Method 
-#Breaks up frequencies into multiple bands (similar to PMCC method) instead of one singular calculation.
-#%%User defined parameters
+############################################################################
+### Narrow Band Least Squares Method #######################################
+### Breaks up frequencies into multiple bands (similar to PMCC method) #####
+### Normal least squares uses the entire frequency  band for calculation ###
+### Authors: Sneha Bhetanabhotla, Alex Iezzi, and Robin Matoza #############
+############################################################################
 
+###############
+### Imports ###
+###############
 #from waveform_collection import gather_waveforms #Commented out by Sneha 
 # Added by alex
 #import sys
@@ -16,6 +22,7 @@ import pylab as pl
 from matplotlib.patches import Rectangle
 import matplotlib.colorbar as cbar
 from matplotlib import cm
+from matplotlib import rcParams
 from array_processing.algorithms.helpers import getrij
 from array_processing.tools.plotting import array_plot
 from lts_array import ltsva
@@ -23,9 +30,24 @@ import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 
 
+
+##################
+### User Input ###
+##################
+
+START = UTCDateTime('2010-05-28T13:30:00')
+END = UTCDateTime('2010-05-28T15:30:00')
 FMT = '%Y-%m-%dT%H:%M:%S.%f'
 
-#same parameters as PMCC
+# RIOE coordinates
+latlist = [-1.74812, -1.74749, -1.74906, -1.74805]
+lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
+
+#data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'      # directory where data is located
+data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
+
+
+# same parameters as PMCC
 # Filtering
 FMIN = 0.1  # [Hz]
 FMAX = 10    # [Hz] #should not exceed 20 Hz 
@@ -35,17 +57,28 @@ FMAX = 10    # [Hz] #should not exceed 20 Hz
 WINLEN = 50  # [s]
 WINOVER = 0.5
 
-##################################################################################
-### Added by Alex ###
+nbands = 15 #indicates number of frequency bands 
+freq_band_type = 'linear' # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
+
+ALPHA = 1.0
+
+
+### Figure Save Options ###
 #save_dir = '/Users/snehabhetanabhotla/Desktop/Research/Plots/LeastSquaresCode/LeastSquaresButPMCC/'			# directory in which to save figures
-#data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'		# directory where data is located
-save_dir = '/Users/aiezzi/Desktop/'         # directory in which to save figures
-data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/PMCC_Training/data/'       # directory where data is located
+save_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'         # directory in which to save figures
+file_type = '.png'
+dpi_num = 300
+fonts = 14
+rcParams.update({'font.size': fonts})
 
 
 
-START = UTCDateTime('2010-05-28T13:30:00')
-END = UTCDateTime('2010-05-28T15:30:00')
+
+##############################################################################
+######################
+### End User Input ###
+######################
+##############################################################################
 
 # Read in waveforms 
 st = Stream()
@@ -62,7 +95,7 @@ tr2 = st[1]
 tr3 = st[2]
 tr4 = st[3]
 
-#Time vector 
+# Time vector 
 timevec = st[0].times('matplotlib')
 
 # Calibrate the data
@@ -81,30 +114,17 @@ tr4.data = tr4.data*calib
 
 #%% Grab and filter waveforms										
 
- 
-nbands = 10 #indicates number of bands 
-type = 'linear' #indicates linear or logarithmic spacing 
-
 freqrange = FMAX - FMIN
 freqinterval = freqrange / nbands
 
-if type == 'linear':
+if freq_band_type == 'linear':
     freqlist = np.arange(FMIN, FMAX, freqinterval)
-elif type == 'log':
+elif freq_band_type == 'log':
     FMINL = math.log(FMIN, 10)
     FMAXL = math.log(FMAX, 10)
     freqlist = np.logspace(FMINL, FMAXL, num = nbands)
 
-
-ALPHA = 1.0
-
 ######################################################
-### Added by Alex ### 
-# RIOE coordinates
-latlist = [-1.74812, -1.74749, -1.74906, -1.74805]
-lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
-######################################################
-
 
 rij = getrij(latlist, lonlist)
 
@@ -116,10 +136,23 @@ mdccmlist = [] #mdccm
 stdictlist = [] #?
 sig_taulist = [] #? 
 
-# PMCC like plot
-fig, axs = plt.subplots(2,1)
-fig.set_size_inches(10, 5)
 
+
+######################
+### PMCC like plot ###
+######################
+#fig, axs = plt.subplots(2,1)
+#fig.set_size_inches(10, 5)
+fig = plt.figure(figsize=(15,13), dpi=dpi_num)
+gs = gridspec.GridSpec(4,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1])
+
+cm = 'RdYlBu_r'
+cax = (FMIN, FMAX)
+
+ax0 = plt.subplot(gs[0,0])  # Pressure Plot
+ax1 = plt.subplot(gs[1,0])  # Backazimuth Plot
+ax2 = plt.subplot(gs[2,0])  # Trace Velocity Plot
+ax3 = plt.subplot(gs[3,0])  # Scatter Plot
 
 for x in range(nbands - 1): 
     tempst_filter = st.copy()
@@ -152,17 +185,18 @@ for x in range(nbands - 1):
         t_float.append(float(t[ii]))
     t_float = np.array(t_float)
 
+    height_temp = tempfmax - tempfmin # height of frequency rectangles
+
     # Pressure plot
     if x == 0:
-        #Pressure Plot
-        axs[0].plot(timevec, tempst_filter[0], 'k') #plots pressure for the first band
-        axs[0].set_ylabel('Pressure [Pa]') 
+        ax0.plot(timevec, tempst_filter[0], 'k') # plots pressure for the first band
 
-    height_temp = tempfmax - tempfmin
 
-    # Plot Backazimuth
-    normal = pl.Normalize(baz_float.min(), baz_float.max())
-    colors = pl.cm.jet(normal(baz_float))
+
+    # Backazimuth Plot 
+    #normal = pl.Normalize(baz_float.min(), baz_float.max())
+    normal_baz = pl.Normalize(0, 360)
+    colors_baz = pl.cm.jet(normal_baz(baz_float))
 
     for ii in range(len(t_float)-1):
         width_temp = t_float[ii+1] - t_float[ii]
@@ -170,82 +204,87 @@ for x in range(nbands - 1):
         #if np.greater(mdccmlist[ii], 0.6):
             x_temp = t_float[ii]
             y_temp = tempfmin
-            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors[ii])
-            axs[1].add_patch(rect)
+            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_baz[ii])
+            ax1.add_patch(rect)
 
-   
-axs[1].set_ylabel('Frequency [Hz]')   
-axs[0].xaxis_date()
-axs[1].xaxis_date()
-axs[1].set_ylim(FMIN,FMAX)
-axs[1].set_xlim(t_float[0],t_float[-1])
+    # Trace Velocity Plot 
+    #normal_vel = pl.Normalize(vel_float.min(), vel_float.max()) # This re-normalizing for each narrow frequency band (not right)
+    normal_vel = pl.Normalize(0.2,0.5)
+    colors_vel = pl.cm.jet(normal_vel(vel_float))
 
-# Add colorbar
-cax, _ = cbar.make_axes(axs[1]) 
-cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal) 
-
-# Save figure
-fig.savefig(save_dir + 'LeastSquaresButPMCC', dpi=150)
-
-
-'''
-# Scatter Plot Robin Asked For
-fig, axs = plt.subplots(2, 1, sharex='col')
-fig.set_size_inches(10, 6)
-
-# Specify the colormap.
-cm = 'RdYlBu_r'
-# Colorbar/y-axis limits for frequency.
-cax = (FMIN, FMAX)
+    for ii in range(len(t_float)-1):
+        width_temp = t_float[ii+1] - t_float[ii]
+        if mdccm_float[ii] >= 0.6: 
+        #if np.greater(mdccmlist[ii], 0.6):
+            x_temp = t_float[ii]
+            y_temp = tempfmin
+            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_vel[ii])
+            ax2.add_patch(rect)
 
 
-for x in range(nbands - 1): 
-    tempst_filter = st.copy()
-    tempfmin = freqlist[x]
-    tempfmax = freqlist[x+1]
-    tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=2, zerophase = True)
-    tempst_filter.taper(max_percentage=0.01)
-    filteredst.append(tempst_filter)
-    #Array Processing 
-    vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN, WINOVER, ALPHA)
-
-
-    #Adding output values to lists 
-    #vellist.append(vel)
-    #bazlist.append(baz)
-    #tlist.append(t)
-    #mdccmlist.append(mdccm)
-    #stdictlist.append(stdict)
-    #sig_taulist.append(sig_tau)
-
-    # Pressure plot
-    if x == 0:
-        #Pressure Plot
-        axs[0].plot(timevec, tempst_filter[0], 'k') #plots pressure for the first band
-        axs[0].set_ylabel('Pressure [Pa]') 
-
-
-    #Backazimuth Plot 
+    # Scatter plot
     for ii in range(len(mdccm)):
         if mdccm[ii] >= 0.6:
-            sc = axs[1].scatter(t[ii],baz[ii], c=tempfmax, edgecolors='k', lw=0.3, cmap=cm)
+            sc = ax3.scatter(t[ii],baz[ii], c=tempfmax, edgecolors='k', lw=0.3, cmap=cm)
             sc.set_clim(cax)
+
+
    
+# Pressure plot 
+ax0.xaxis_date()
+ax0.set_xlim(timevec[0], timevec[-1])
+ax0.set_ylabel('Pressure [Pa]', fontsize=fonts+2, fontweight='bold') 
+ax0.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
+ax0.set_title('a)', loc='left', fontsize=fonts+2, fontweight='bold')
 
-axs[1].set_ylabel('Backazimuth [degrees]')
-axs[1].xaxis_date()
+# Backazimuth Plot
+ax1.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')  
+ax1.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
+ax1.set_title('b)', loc='left', fontsize=fonts+2, fontweight='bold')
+ax1.xaxis_date()
+ax1.set_ylim(FMIN,FMAX)
+ax1.set_xlim(t_float[0],t_float[-1])
 
-# Add the colorbar.
-cbot = axs[1].get_position().y0
-ctop = axs[1].get_position().y1
-cbaxes = fig.add_axes([0.92, cbot, 0.02, ctop-cbot])
-hc = plt.colorbar(sc, cax=cbaxes)
-hc.set_label('Frequency [Hz]')  
+# Trace Velocity Plot
+ax2.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')  
+ax2.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
+ax2.set_title('c)', loc='left', fontsize=fonts+2, fontweight='bold')
+ax2.xaxis_date()
+ax2.set_ylim(FMIN,FMAX)
+ax2.set_xlim(t_float[0],t_float[-1])
 
-# Save figure
-fig.savefig(save_dir + 'LeastSquaresButPMCC_scatter', dpi=150)
-    
-'''
+# Scatter Plot
+ax3.set_ylabel('Backazimuth [deg]', fontsize=fonts+2, fontweight='bold')  
+ax3.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
+ax3.set_title('d)', loc='left', fontsize=fonts+2, fontweight='bold')
+ax3.xaxis_date()
+ax3.set_ylim(0,360)
+ax3.set_xlim(t_float[0],t_float[-1])
+
+
+
+# Add colorbar to backazimuth plot
+cax = plt.subplot(gs[1,1]) 
+cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_baz,orientation='vertical', ticks=[0,90,180,270,360]) 
+cax.set_ylabel('Backazimuth [deg]', fontsize=fonts+2, fontweight='bold')
+
+# Add colorbar to trace velocity plot
+cax = plt.subplot(gs[2,1]) 
+cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_vel,orientation='vertical') 
+cax.set_ylabel('Trace Velocity [km/s]', fontsize=fonts+2, fontweight='bold')
+
+# Add colorbar to scatter plot
+cbaxes = plt.subplot(gs[3,1]) 
+hc = plt.colorbar(sc, cax=cbaxes,orientation='vertical') 
+cbaxes.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
+
+
+### Save figure ###
+plt.tight_layout()
+fig.savefig(save_dir + 'LeastSquaresButPMCC', dpi=150)
+plt.close(fig)
+
+
 
 
 
@@ -270,7 +309,7 @@ fig8, axs8 = array_plot(filteredst[7], tlist[7], mdccmlist[7], vellist[7], bazli
 fig9, axs9 = array_plot(filteredst[8], tlist[8], mdccmlist[8], vellist[8], bazlist[8], ccmplot=True, mcthresh=0.6, sigma_tau=sig_taulist[8])
 
 
-if type == 'linear':
+if freq_band_type == 'linear':
     fig1.savefig(save_dir + 'MCCM_example_least_squares_linear_1.png', dpi=150)
     fig2.savefig(save_dir + 'MCCM_example_least_squares_linear_2.png', dpi=150)
     fig3.savefig(save_dir + 'MCCM_example_least_squares_linear_3.png', dpi=150)
@@ -280,7 +319,7 @@ if type == 'linear':
     fig7.savefig(save_dir + 'MCCM_example_least_squares_linear_7.png', dpi=150)
     fig8.savefig(save_dir + 'MCCM_example_least_squares_linear_8.png', dpi=150)
     fig9.savefig(save_dir + 'MCCM_example_least_squares_linear_9.png', dpi=150)
-elif type == 'log':
+elif freq_band_type == 'log':
     fig1.savefig(save_dir + 'MCCM_example_least_squares_log_1.png', dpi=150)
     fig2.savefig(save_dir + 'MCCM_example_least_squares_log_2.png', dpi=150)
     fig3.savefig(save_dir + 'MCCM_example_least_squares_log_3.png', dpi=150)
