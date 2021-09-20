@@ -24,10 +24,11 @@ import matplotlib.colorbar as cbar
 from matplotlib import cm
 from matplotlib import rcParams
 from array_processing.algorithms.helpers import getrij
-from array_processing.tools.plotting import array_plot
+#from array_processing.tools.plotting import array_plot
 from lts_array import ltsva
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta
+from scipy import signal # For Chebychev filter
 
 
 
@@ -35,41 +36,42 @@ from datetime import datetime, timedelta
 ### User Input ###
 ##################
 
-START = UTCDateTime('2010-05-28T13:30:00')
-END = UTCDateTime('2010-05-28T15:30:00')
-FMT = '%Y-%m-%dT%H:%M:%S.%f'
+### Data information ###
+START = UTCDateTime('2010-05-28T13:30:00')          # start time for processing (UTCDateTime)
+END = UTCDateTime('2010-05-28T15:30:00')            # end time for processing (UTCDateTime)
+FMT = '%Y-%m-%dT%H:%M:%S.%f'                        # date/time format 
 
 # RIOE coordinates
 latlist = [-1.74812, -1.74749, -1.74906, -1.74805]
 lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
 
-#data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'      # directory where data is located
-data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
+#data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'                                      # directory where data is located
+#data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
+data_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'          # directory where data is located
 
-# same parameters as PMCC
-# Filtering
-FMIN = 0.1  # [Hz]
-FMAX = 10    # [Hz] #should not exceed 20 Hz 
 
-#same parameters as PMCC
-# Array processing
-WINLEN = 50  # [s]
-WINOVER = 0.5
+### Filtering ###
+FMIN = 0.1                  # [Hz]
+FMAX = 15                   # [Hz] #should not exceed 20 Hz 
+nbands = 15                 # indicates number of frequency bands 
+freq_band_type = 'linear'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
+filter_type = 'butter'      # filter type; 'butter', 'cheby'
 
-nbands = 15 #indicates number of frequency bands 
-freq_band_type = 'linear' # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
 
-ALPHA = 1.0
+### Array processing ###
+WINLEN = 50                 # window length [s]
+WINOVER = 0.5               # window overlap
+ALPHA = 1.0                 # Use ordinary least squares processing (not trimmed least squares)
 
 
 ### Figure Save Options ###
-#save_dir = '/Users/snehabhetanabhotla/Desktop/Research/Plots/LeastSquaresCode/LeastSquaresButPMCC/'			# directory in which to save figures
-save_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'         # directory in which to save figures
-file_type = '.png'
-dpi_num = 300
-fonts = 14
+#save_dir = '/Users/snehabhetanabhotla/Desktop/Research/Plots/LeastSquaresCode/LeastSquaresButPMCC/'			     # directory in which to save figures
+#save_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'         # directory in which to save figures
+save_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'            # directory in which to save figures
+file_type = '.png'                          # file save type
+dpi_num = 300                               # dots per inch for plot save
+fonts = 14                                  # default font size for plotting
 rcParams.update({'font.size': fonts})
-
 
 
 
@@ -97,7 +99,7 @@ tr4 = st[3]
 # Time vector 
 timevec = st[0].times('matplotlib')
 
-# Calibrate the data
+# Calibrate the data (RIOE)
 calib = -0.000113  # Pa/count
 tr1.data = tr1.data*calib
 tr2.data = tr2.data*calib
@@ -127,6 +129,27 @@ elif freq_band_type == 'log':
 
 rij = getrij(latlist, lonlist)
 
+
+
+### Plot array geometry ###
+fig = plt.figure(figsize=(5,5), dpi=dpi_num)
+gs = gridspec.GridSpec(1,1)
+
+ax0 = plt.subplot(gs[0,0]) 
+ax0.scatter(rij[0], rij[1]) 
+ax0.set_xlabel('X [km]', fontsize=fonts+2, fontweight='bold')
+ax0.set_ylabel('Y [km]', fontsize=fonts+2, fontweight='bold')
+ax0.axis('square')
+ax0.grid()
+
+### Save figure ###
+plt.tight_layout()
+fig.savefig(save_dir + 'Array_Geometry', dpi=dpi_num)
+plt.close(fig)
+
+
+
+
 filteredst = [] #list of filtered streams 
 vellist = [] #velocity list 
 bazlist = [] #back azimuth list
@@ -145,7 +168,8 @@ sig_taulist = [] #?
 fig = plt.figure(figsize=(15,13), dpi=dpi_num)
 gs = gridspec.GridSpec(4,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1])
 
-cm = 'RdYlBu_r'
+#cm = 'RdYlBu_r'
+cm = 'jet'
 cax = (FMIN, FMAX)
 
 ax0 = plt.subplot(gs[0,0])  # Pressure Plot
@@ -154,13 +178,32 @@ ax2 = plt.subplot(gs[2,0])  # Trace Velocity Plot
 ax3 = plt.subplot(gs[3,0])  # Scatter Plot
 
 for x in range(nbands - 1): 
+#for x in range(1):
     tempst_filter = st.copy()
     tempfmin = freqlist[x]
     tempfmax = freqlist[x+1]
-    tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=2, zerophase = True)
-    tempst_filter.taper(max_percentage=0.01)
+    if filter_type == 'butter': 
+        tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=2, zerophase = True)
+    elif filter_type == 'cheby': ### DONT USE YET; NEEDS TO BE FIXED
+        order = 2
+        ripple = 0.01
+        Fs = tempst_filter[0].stats.sampling_rate
+        Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
+        #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
+        sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
+        for ii in range(len(st)):
+            # put signal in numpy array
+            temp_array = tempst_filter[ii].data
+            # Filter
+            filtered = signal.sosfilt(sos, temp_array)
+            #filtered =signal.filtfilt(b,a,temp_array)
+            # transform signal back to st
+            tempst_filter[ii].data = filtered
+
+    tempst_filter.taper(max_percentage=0.01)    # Taper the waveforms
     filteredst.append(tempst_filter)
-    #Array Processing 
+
+    # Run Array Processing 
     vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN, WINOVER, ALPHA)
 
     # Convert array processing output to numpy array of floats
@@ -280,7 +323,7 @@ cbaxes.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
 
 ### Save figure ###
 plt.tight_layout()
-fig.savefig(save_dir + 'LeastSquaresButPMCC', dpi=150)
+fig.savefig(save_dir + 'LeastSquaresButPMCC', dpi=dpi_num)
 plt.close(fig)
 
 
