@@ -41,7 +41,7 @@ START = UTCDateTime('2010-05-28T13:30:00')          # start time for processing 
 END = UTCDateTime('2010-05-28T15:30:00')            # end time for processing (UTCDateTime)
 FMT = '%Y-%m-%dT%H:%M:%S.%f'                        # date/time format 
 
-# RIOE coordinates
+# RIOE coordinates (make sure this is not hardcoded)
 latlist = [-1.74812, -1.74749, -1.74906, -1.74805]
 lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
 
