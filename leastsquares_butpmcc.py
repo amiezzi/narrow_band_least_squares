@@ -8,7 +8,7 @@
 ###############
 ### Imports ###
 ###############
-#from waveform_collection import gather_waveforms #Commented out by Sneha 
+from waveform_collection import gather_waveforms #Commented out by Sneha 
 # Added by alex
 #import sys
 #sys.path.append('/Users/aiezzi/repos/array_processing/')
@@ -31,12 +31,26 @@ from datetime import datetime, timedelta
 from scipy import signal # For Chebychev filter
 
 
-
+##############################################################################
 ##################
 ### User Input ###
 ##################
 
 ### Data information ###
+# Data collection
+SOURCE = 'local'                                     # Data source; 'IRIS' or 'local'
+
+'''
+# IRIS Example
+NETWORK = 'IM'
+STATION = 'I53H?'
+LOCATION = '*'
+CHANNEL = 'BDF'
+START = UTCDateTime('2018-12-19T01:45:00')
+END = START + 20*60
+'''
+
+# Local Example
 START = UTCDateTime('2010-05-28T13:30:00')          # start time for processing (UTCDateTime)
 END = UTCDateTime('2010-05-28T15:30:00')            # end time for processing (UTCDateTime)
 FMT = '%Y-%m-%dT%H:%M:%S.%f'                        # date/time format 
@@ -52,8 +66,8 @@ data_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Train
 
 ### Filtering ###
 FMIN = 0.1                  # [Hz]
-FMAX = 15                   # [Hz] #should not exceed 20 Hz 
-nbands = 15                 # indicates number of frequency bands 
+FMAX = 10                   # [Hz] #should not exceed 20 Hz 
+nbands = 10                 # indicates number of frequency bands 
 freq_band_type = 'linear'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
 filter_type = 'butter'      # filter type; 'butter', 'cheby'
 
@@ -79,57 +93,71 @@ rcParams.update({'font.size': fonts})
 ######################
 ### End User Input ###
 ######################
+
+
 ##############################################################################
+###################
+### Gather Data ###
+###################
+if SOURCE == 'IRIS':
+    st = gather_waveforms(SOURCE, NETWORK, STATION, LOCATION, CHANNEL, START, END, remove_response=True)
+    latlist = [tr.stats.latitude for tr in st]
+    lonlist = [tr.stats.longitude for tr in st]
 
-# Read in waveforms 
-st = Stream()
-st += read(data_dir + '20100528.RIOE1.BDF.mseed')
-st += read(data_dir + '20100528.RIOE2.BDF.mseed')
-st += read(data_dir + '20100528.RIOE3.BDF.mseed')
-st += read(data_dir + '20100528.RIOE4.BDF.mseed')
+# This is hardcoded for RIOE...will have to fix!
+elif SOURCE == 'local':
+    # Read in waveforms 
+    st = Stream()
+    st += read(data_dir + '20100528.RIOE1.BDF.mseed')
+    st += read(data_dir + '20100528.RIOE2.BDF.mseed')
+    st += read(data_dir + '20100528.RIOE3.BDF.mseed')
+    st += read(data_dir + '20100528.RIOE4.BDF.mseed')
+    st.trim(START, END)
 
-st.trim(START, END)
+    #make this a for loop at some point 
+    tr1 = st[0]
+    tr2 = st[1]
+    tr3 = st[2]
+    tr4 = st[3]
 
-#make this a for loop at some point 
-tr1 = st[0]
-tr2 = st[1]
-tr3 = st[2]
-tr4 = st[3]
+    # Calibrate the data (RIOE)
+    calib = -0.000113  # Pa/count
+    tr1.data = tr1.data*calib
+    tr2.data = tr2.data*calib
+    tr3.data = tr3.data*calib
+    tr4.data = tr4.data*calib
 
-# Time vector 
+# Time vector for plotting
 timevec = st[0].times('matplotlib')
-
-# Calibrate the data (RIOE)
-calib = -0.000113  # Pa/count
-tr1.data = tr1.data*calib
-tr2.data = tr2.data*calib
-tr3.data = tr3.data*calib
-tr4.data = tr4.data*calib
 
 #Default plot to sanity check 
 #can also do print(st)
 #st.plot() 
 
+
 ##################################################################################
-
-
-#%% Grab and filter waveforms										
+###########################
+### Set Up Narrow Bands ###
+###########################										
 
 freqrange = FMAX - FMIN
-freqinterval = freqrange / nbands
 
 if freq_band_type == 'linear':
-    freqlist = np.arange(FMIN, FMAX, freqinterval)
+    freqinterval = freqrange / nbands
+    freqlist = np.arange(FMIN, FMAX+freqinterval, freqinterval)
 elif freq_band_type == 'log':
     FMINL = math.log(FMIN, 10)
     FMAXL = math.log(FMAX, 10)
-    freqlist = np.logspace(FMINL, FMAXL, num = nbands)
+    freqlist = np.logspace(FMINL, FMAXL, num = nbands+1)
 
-######################################################
 
+##################################################################################
+######################
+### Array Geometry ###
+######################
+
+# Convert array coordinates to array processing geometry
 rij = getrij(latlist, lonlist)
-
-
 
 ### Plot array geometry ###
 fig = plt.figure(figsize=(5,5), dpi=dpi_num)
@@ -148,8 +176,17 @@ fig.savefig(save_dir + 'Array_Geometry', dpi=dpi_num)
 plt.close(fig)
 
 
+##################################################################################
+############################
+### Run Array Processing ###
+############################
 
 
+
+
+####################################
+### Save Array Processing Output ###
+####################################
 filteredst = [] #list of filtered streams 
 vellist = [] #velocity list 
 bazlist = [] #back azimuth list
@@ -159,7 +196,7 @@ stdictlist = [] #?
 sig_taulist = [] #? 
 
 
-
+##################################################################################
 ######################
 ### PMCC like plot ###
 ######################
@@ -177,7 +214,8 @@ ax1 = plt.subplot(gs[1,0])  # Backazimuth Plot
 ax2 = plt.subplot(gs[2,0])  # Trace Velocity Plot
 ax3 = plt.subplot(gs[3,0])  # Scatter Plot
 
-for x in range(nbands - 1): 
+for x in range(nbands): 
+#for x in range(nbands - 1): 
 #for x in range(1):
     tempst_filter = st.copy()
     tempfmin = freqlist[x]
@@ -267,7 +305,8 @@ for x in range(nbands - 1):
     # Scatter plot
     for ii in range(len(mdccm)):
         if mdccm[ii] >= 0.6:
-            sc = ax3.scatter(t[ii],baz[ii], c=tempfmax, edgecolors='k', lw=0.3, cmap=cm)
+            tempfavg = tempfmin + ((tempfmax - tempfmin)/2)        # center point of the frequency interval
+            sc = ax3.scatter(t[ii], baz[ii], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
             sc.set_clim(cax)
 
 
