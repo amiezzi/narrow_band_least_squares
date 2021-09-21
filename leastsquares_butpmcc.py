@@ -176,24 +176,116 @@ fig.savefig(save_dir + 'Array_Geometry', dpi=dpi_num)
 plt.close(fig)
 
 
+
+
+#################################
+### Broadband Bandpass filter ###
+#################################
+stf_broad = st.copy()
+if filter_type == 'butter': 
+        stf_broad.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=2, zerophase = True)
+elif filter_type == 'cheby': ### DONT USE YET; NEEDS TO BE FIXED
+    order = 2
+    ripple = 0.01
+    Fs = tempst_filter[0].stats.sampling_rate
+    Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
+    #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
+    sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
+    for ii in range(len(st)):
+        # put signal in numpy array
+        temp_array = stf_broad[ii].data
+        # Filter
+        filtered = signal.sosfilt(sos, temp_array)
+        #filtered =signal.filtfilt(b,a,temp_array)
+        # transform signal back to st
+        stf_broad[ii].data = filtered
+
+stf_broad.taper(max_percentage=0.01)    # Taper the waveforms
+
+
 ##################################################################################
+###############################
+### Initialize Numpy Arrays ###
+###############################
+#filteredst = [] #list of filtered streams 
+#vellist = [] #velocity list 
+#bazlist = [] #back azimuth list
+#tlist = [] #time? 
+#mdccmlist = [] #mdccm 
+#stdictlist = [] #?
+#sig_taulist = [] #? 
+
+#filteredst = np.empty(shape=(nbands, st[0].stats.npts), dtype=float)
+
+
+
 ############################
 ### Run Array Processing ###
 ############################
+for ii in range(nbands): 
+#for x in range(nbands - 1): 
+#for x in range(1):
+    tempst_filter = st.copy()
+    tempfmin = freqlist[ii]
+    tempfmax = freqlist[ii+1]
+    if filter_type == 'butter': 
+        tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=2, zerophase = True)
+    elif filter_type == 'cheby': ### DONT USE YET; NEEDS TO BE FIXED
+        order = 2
+        ripple = 0.01
+        Fs = tempst_filter[0].stats.sampling_rate
+        Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
+        #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
+        sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
+        for jj in range(len(st)):
+            # put signal in numpy array
+            temp_array = tempst_filter[jj].data
+            # Filter
+            filtered = signal.sosfilt(sos, temp_array)
+            #filtered =signal.filtfilt(b,a,temp_array)
+            # transform signal back to st
+            tempst_filter[jj].data = filtered
 
+    tempst_filter.taper(max_percentage=0.01)    # Taper the waveforms
+    #filteredst.append(tempst_filter)
+    #filteredst[ii][:]=tempst_filter
 
+    # Run Array Processing 
+    vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN, WINOVER, ALPHA)
 
+    # Convert array processing output to numpy array of floats
+    vel_float = []
+    for jj in range(len(vel)):
+        vel_float.append(float(vel[jj]))
+    vel_float = np.array(vel_float)
 
-####################################
-### Save Array Processing Output ###
-####################################
-filteredst = [] #list of filtered streams 
-vellist = [] #velocity list 
-bazlist = [] #back azimuth list
-tlist = [] #time? 
-mdccmlist = [] #mdccm 
-stdictlist = [] #?
-sig_taulist = [] #? 
+    baz_float = []
+    for jj in range(len(baz)):
+        baz_float.append(float(baz[jj]))
+    baz_float = np.array(baz_float)
+
+    mdccm_float = []
+    for jj in range(len(mdccm)):
+        mdccm_float.append(float(mdccm[jj]))
+    mdccm_float = np.array(mdccm_float)
+
+    t_float = []
+    for jj in range(len(t)):
+        t_float.append(float(t[jj]))
+    t_float = np.array(t_float)
+
+    ### Save Array Processing Output ###
+    if ii == 0:
+        vel_array = vel_float
+        baz_array = baz_float
+        mdccm_array = mdccm_float
+        t_array = t_float
+    else: 
+        vel_array = np.vstack([vel_array, vel_float])
+        baz_array = np.vstack([baz_array, baz_float])
+        mdccm_array = np.vstack([mdccm_array, mdccm_float])
+        t_array = np.vstack([t_array, t_float])
+
 
 
 ##################################################################################
@@ -209,104 +301,60 @@ gs = gridspec.GridSpec(4,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1])
 cm = 'jet'
 cax = (FMIN, FMAX)
 
+
+
+# Pressure plot
 ax0 = plt.subplot(gs[0,0])  # Pressure Plot
+ax0.plot(timevec, stf_broad[0], 'k') # plots pressure for the first band
+
+
 ax1 = plt.subplot(gs[1,0])  # Backazimuth Plot
 ax2 = plt.subplot(gs[2,0])  # Trace Velocity Plot
 ax3 = plt.subplot(gs[3,0])  # Scatter Plot
 
-for x in range(nbands): 
-#for x in range(nbands - 1): 
-#for x in range(1):
-    tempst_filter = st.copy()
-    tempfmin = freqlist[x]
-    tempfmax = freqlist[x+1]
-    if filter_type == 'butter': 
-        tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=2, zerophase = True)
-    elif filter_type == 'cheby': ### DONT USE YET; NEEDS TO BE FIXED
-        order = 2
-        ripple = 0.01
-        Fs = tempst_filter[0].stats.sampling_rate
-        Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
-        #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
-        sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
-        for ii in range(len(st)):
-            # put signal in numpy array
-            temp_array = tempst_filter[ii].data
-            # Filter
-            filtered = signal.sosfilt(sos, temp_array)
-            #filtered =signal.filtfilt(b,a,temp_array)
-            # transform signal back to st
-            tempst_filter[ii].data = filtered
 
-    tempst_filter.taper(max_percentage=0.01)    # Taper the waveforms
-    filteredst.append(tempst_filter)
+for ii in range(nbands):
 
-    # Run Array Processing 
-    vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN, WINOVER, ALPHA)
-
-    # Convert array processing output to numpy array of floats
-    vel_float = []
-    for ii in range(len(vel)):
-        vel_float.append(float(vel[ii]))
-    vel_float = np.array(vel_float)
-
-    baz_float = []
-    for ii in range(len(baz)):
-        baz_float.append(float(baz[ii]))
-    baz_float = np.array(baz_float)
-
-    mdccm_float = []
-    for ii in range(len(mdccm)):
-        mdccm_float.append(float(mdccm[ii]))
-    mdccm_float = np.array(mdccm_float)
-
-    t_float = []
-    for ii in range(len(t)):
-        t_float.append(float(t[ii]))
-    t_float = np.array(t_float)
-
+    # Frequency band info
+    tempfmin = freqlist[ii]
+    tempfmax = freqlist[ii+1]
     height_temp = tempfmax - tempfmin # height of frequency rectangles
+    tempfavg = tempfmin + (height_temp/2)        # center point of the frequency interval
 
-    # Pressure plot
-    if x == 0:
-        ax0.plot(timevec, tempst_filter[0], 'k') # plots pressure for the first band
+    # Gather array processing results for this narrow frequency band
+    vel_float = vel_array[ii,:]
+    baz_float = baz_array[ii,:]
+    mdccm_float = mdccm_array[ii,:]
+    t_float = t_array[ii,:]
 
-
-
-    # Backazimuth Plot 
+    # Initialize colorbars
     #normal = pl.Normalize(baz_float.min(), baz_float.max())
     normal_baz = pl.Normalize(0, 360)
     colors_baz = pl.cm.jet(normal_baz(baz_float))
 
-    for ii in range(len(t_float)-1):
-        width_temp = t_float[ii+1] - t_float[ii]
-        if mdccm_float[ii] >= 0.6: 
-        #if np.greater(mdccmlist[ii], 0.6):
-            x_temp = t_float[ii]
-            y_temp = tempfmin
-            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_baz[ii])
-            ax1.add_patch(rect)
-
-    # Trace Velocity Plot 
     #normal_vel = pl.Normalize(vel_float.min(), vel_float.max()) # This re-normalizing for each narrow frequency band (not right)
     normal_vel = pl.Normalize(0.2,0.5)
     colors_vel = pl.cm.jet(normal_vel(vel_float))
 
-    for ii in range(len(t_float)-1):
-        width_temp = t_float[ii+1] - t_float[ii]
-        if mdccm_float[ii] >= 0.6: 
+
+
+    for jj in range(len(t_float)-1):
+        width_temp = t_float[jj+1] - t_float[jj]
+        if mdccm_float[jj] >= 0.6: 
         #if np.greater(mdccmlist[ii], 0.6):
-            x_temp = t_float[ii]
+            x_temp = t_float[jj]
             y_temp = tempfmin
-            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_vel[ii])
+
+            # Backazimuth plot 
+            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_baz[jj])
+            ax1.add_patch(rect)
+
+            # Trace Velocity Plot 
+            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_vel[jj])
             ax2.add_patch(rect)
 
-
-    # Scatter plot
-    for ii in range(len(mdccm)):
-        if mdccm[ii] >= 0.6:
-            tempfavg = tempfmin + ((tempfmax - tempfmin)/2)        # center point of the frequency interval
-            sc = ax3.scatter(t[ii], baz[ii], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
+            # Scatter plot
+            sc = ax3.scatter(t_float[jj], baz_float[jj], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
             sc.set_clim(cax)
 
 
@@ -360,7 +408,9 @@ hc = plt.colorbar(sc, cax=cbaxes,orientation='vertical')
 cbaxes.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
 
 
+###################
 ### Save figure ###
+###################
 plt.tight_layout()
 fig.savefig(save_dir + 'LeastSquaresButPMCC', dpi=dpi_num)
 plt.close(fig)
