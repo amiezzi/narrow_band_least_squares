@@ -1,20 +1,21 @@
 ############################################################################
-### Narrow Band Least Squares Method #######################################
-### Breaks up frequencies into multiple bands (similar to PMCC method) #####
-### Normal least squares uses the entire frequency  band for calculation ###
-### Authors: Sneha Bhetanabhotla, Alex Iezzi, and Robin Matoza #############
+################## Narrow Band Least Squares Method ########################
+############################################################################
+### Breaks up frequencies into multiple bands (similar to PMCC method) 
+### Normal least squares uses the entire frequency  band for calculation 
+### Authors: Sneha Bhetanabhotla, Alex Iezzi, and Robin Matoza 
+### University of California Santa Barbara 
+### Contact: Alex Iezzi (amiezzi@ucsb.edu) 
+### Last Modified: September 21, 2021 
 ############################################################################
 
 ###############
 ### Imports ###
 ###############
 from waveform_collection import gather_waveforms #Commented out by Sneha 
-# Added by alex
-#import sys
-#sys.path.append('/Users/aiezzi/repos/array_processing/')
 from obspy.core import UTCDateTime, Stream, read
 import numpy as np
-import matplotlib as mpl
+#import matplotlib as mpl
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import math as math
@@ -24,11 +25,11 @@ import matplotlib.colorbar as cbar
 from matplotlib import cm
 from matplotlib import rcParams
 from array_processing.algorithms.helpers import getrij
-#from array_processing.tools.plotting import array_plot
+from array_processing.tools.plotting import array_plot
 from lts_array import ltsva
-import matplotlib.dates as mdates
-from datetime import datetime, timedelta
-from scipy import signal # For Chebychev filter
+#import matplotlib.dates as mdates
+#from datetime import datetime, timedelta
+from scipy import signal 
 
 
 ##############################################################################
@@ -55,9 +56,10 @@ START = UTCDateTime('2010-05-28T13:30:00')          # start time for processing 
 END = UTCDateTime('2010-05-28T15:30:00')            # end time for processing (UTCDateTime)
 FMT = '%Y-%m-%dT%H:%M:%S.%f'                        # date/time format 
 
-# RIOE coordinates (make sure this is not hardcoded)
+# RIOE 
 latlist = [-1.74812, -1.74749, -1.74906, -1.74805]
 lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
+calib = -0.000113  # Pa/count
 
 #data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'                                      # directory where data is located
 #data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
@@ -68,15 +70,20 @@ data_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Train
 FMIN = 0.1                  # [Hz]
 FMAX = 10                   # [Hz] #should not exceed 20 Hz 
 nbands = 10                 # indicates number of frequency bands 
-freq_band_type = 'linear'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
-filter_type = 'butter'      # filter type; 'butter', 'cheby'
+freq_band_type = 'log'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
+filter_type = 'cheby1'      # filter type; 'butter', 'cheby1'
 
+
+### Window Length ###
+WINOVER = 0.5               # window overlap
+window_length = 'constant'  # 'constant' or '1/f'
+WINLEN = 50                 # window length [s]; used if window_length = 'constant' AND if window_length = '1/f' (because of broadband processing)
+WINLEN_1 = 200                 # window length for band 1 (lowest frequency) [s]; only used if window_length = '1/f'
+WINLEN_X = 30                 # window length for band X (highest frequency) [s]; only used if window_length = '1/f'
 
 ### Array processing ###
-WINLEN = 50                 # window length [s]
-WINOVER = 0.5               # window overlap
 ALPHA = 1.0                 # Use ordinary least squares processing (not trimmed least squares)
-
+mdccm_thresh = 0.6          # Threshold value of MdCCM for plotting; Must be between 0 and 1
 
 ### Figure Save Options ###
 #save_dir = '/Users/snehabhetanabhotla/Desktop/Research/Plots/LeastSquaresCode/LeastSquaresButPMCC/'			     # directory in which to save figures
@@ -93,6 +100,7 @@ rcParams.update({'font.size': fonts})
 ######################
 ### End User Input ###
 ######################
+##############################################################################
 
 
 ##############################################################################
@@ -103,29 +111,16 @@ if SOURCE == 'IRIS':
     st = gather_waveforms(SOURCE, NETWORK, STATION, LOCATION, CHANNEL, START, END, remove_response=True)
     latlist = [tr.stats.latitude for tr in st]
     lonlist = [tr.stats.longitude for tr in st]
-
-# This is hardcoded for RIOE...will have to fix!
 elif SOURCE == 'local':
     # Read in waveforms 
     st = Stream()
-    st += read(data_dir + '20100528.RIOE1.BDF.mseed')
-    st += read(data_dir + '20100528.RIOE2.BDF.mseed')
-    st += read(data_dir + '20100528.RIOE3.BDF.mseed')
-    st += read(data_dir + '20100528.RIOE4.BDF.mseed')
+    st += read(data_dir + '*.mseed')
     st.trim(START, END)
 
-    #make this a for loop at some point 
-    tr1 = st[0]
-    tr2 = st[1]
-    tr3 = st[2]
-    tr4 = st[3]
-
-    # Calibrate the data (RIOE)
-    calib = -0.000113  # Pa/count
-    tr1.data = tr1.data*calib
-    tr2.data = tr2.data*calib
-    tr3.data = tr3.data*calib
-    tr4.data = tr4.data*calib
+    # Calibrate the data 
+    for ii in range (len(st)):
+        tr = st[ii]
+        tr.data = tr.data*calib
 
 # Time vector for plotting
 timevec = st[0].times('matplotlib')
@@ -136,9 +131,9 @@ timevec = st[0].times('matplotlib')
 
 
 ##################################################################################
-###########################
-### Set Up Narrow Bands ###
-###########################										
+#####################################
+### Set Up Narrow Frequency Bands ###
+#####################################										
 
 freqrange = FMAX - FMIN
 
@@ -150,6 +145,37 @@ elif freq_band_type == 'log':
     FMAXL = math.log(FMAX, 10)
     freqlist = np.logspace(FMINL, FMAXL, num = nbands+1)
 
+
+##################################################################################
+#############################
+### Set Up Window Lengths ###
+#############################   
+WINLEN_list = []                                    
+if window_length == 'constant':
+    for ii in range(nbands):
+        WINLEN_list.append(WINLEN)
+#elif window_length == '1/f':
+
+
+### Plot ###
+height = []
+for ii in range(nbands):
+    height.append(freqlist[ii+1]- freqlist[ii])
+
+fig = plt.figure(figsize=(5,5), dpi=dpi_num)
+gs = gridspec.GridSpec(1,1)
+
+ax0 = plt.subplot(gs[0,0])
+ax0.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k')
+#ax0.scatter(freqlist[:-1], WINLEN_list)
+
+ax0.set_xlabel('Window Length [s]',fontsize=fonts+2, fontweight='bold')
+ax0.set_ylabel('Frequency [Hz]',fontsize=fonts+2, fontweight='bold')
+
+### Save figure ###
+plt.tight_layout()
+fig.savefig(save_dir + 'Window_Length_and_Frequency_Bands', dpi=dpi_num)
+plt.close(fig)
 
 ##################################################################################
 ######################
@@ -177,18 +203,19 @@ plt.close(fig)
 
 
 
-
-#################################
-### Broadband Bandpass filter ###
-#################################
+##################################################################################
+##################################
+### Broadband Array Processing ###
+##################################
 stf_broad = st.copy()
 if filter_type == 'butter': 
         stf_broad.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=2, zerophase = True)
-elif filter_type == 'cheby': ### DONT USE YET; NEEDS TO BE FIXED
+elif filter_type == 'cheby1': ### DONT USE YET; NEEDS TO BE FIXED
     order = 2
     ripple = 0.01
-    Fs = tempst_filter[0].stats.sampling_rate
-    Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
+    Fs = stf_broad[0].stats.sampling_rate
+    #Wn = [FMIN/(Fs/2), FMAX/(Fs/2)]
+    Wn = [FMIN, FMAX]
     #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
     sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
     for ii in range(len(st)):
@@ -202,6 +229,15 @@ elif filter_type == 'cheby': ### DONT USE YET; NEEDS TO BE FIXED
 
 stf_broad.taper(max_percentage=0.01)    # Taper the waveforms
 
+# Broadband array processing
+vel, baz, t, mdccm, stdict, sig_tau = ltsva(st, rij, WINLEN, WINOVER, ALPHA)
+
+fig1, axs1 = array_plot(st, t, mdccm, vel, baz, ccmplot=True, mcthresh=mdccm_thresh, sigma_tau=sig_tau)
+
+
+### Save figure ###
+fig1.savefig(save_dir + 'LeastSquares', dpi=dpi_num)
+plt.close(fig1)
 
 ##################################################################################
 ###############################
@@ -219,22 +255,21 @@ stf_broad.taper(max_percentage=0.01)    # Taper the waveforms
 
 
 
-############################
-### Run Array Processing ###
-############################
+########################################
+### Run Narrow Band Array Processing ###
+########################################
 for ii in range(nbands): 
-#for x in range(nbands - 1): 
-#for x in range(1):
     tempst_filter = st.copy()
     tempfmin = freqlist[ii]
     tempfmax = freqlist[ii+1]
     if filter_type == 'butter': 
         tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=2, zerophase = True)
-    elif filter_type == 'cheby': ### DONT USE YET; NEEDS TO BE FIXED
+    elif filter_type == 'cheby1': ### DONT USE YET; NEEDS TO BE FIXED
         order = 2
         ripple = 0.01
         Fs = tempst_filter[0].stats.sampling_rate
-        Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
+        #Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
+        Wn = [tempfmin, tempfmax]
         #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
         sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
         for jj in range(len(st)):
@@ -251,7 +286,7 @@ for ii in range(nbands):
     #filteredst[ii][:]=tempst_filter
 
     # Run Array Processing 
-    vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN, WINOVER, ALPHA)
+    vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN_list[ii], WINOVER, ALPHA)
 
     # Convert array processing output to numpy array of floats
     vel_float = []
@@ -274,7 +309,9 @@ for ii in range(nbands):
         t_float.append(float(t[jj]))
     t_float = np.array(t_float)
 
+    ####################################
     ### Save Array Processing Output ###
+    ####################################
     if ii == 0:
         vel_array = vel_float
         baz_array = baz_float
@@ -290,28 +327,22 @@ for ii in range(nbands):
 
 ##################################################################################
 ######################
-### PMCC like plot ###
+### PMCC-like plot ###
 ######################
-#fig, axs = plt.subplots(2,1)
-#fig.set_size_inches(10, 5)
 fig = plt.figure(figsize=(15,13), dpi=dpi_num)
 gs = gridspec.GridSpec(4,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1])
-
 #cm = 'RdYlBu_r'
 cm = 'jet'
 cax = (FMIN, FMAX)
 
-
-
-# Pressure plot
+# Pressure plot (broadband bandpass filtered data)
 ax0 = plt.subplot(gs[0,0])  # Pressure Plot
 ax0.plot(timevec, stf_broad[0], 'k') # plots pressure for the first band
 
-
+# Initialize other plots
 ax1 = plt.subplot(gs[1,0])  # Backazimuth Plot
 ax2 = plt.subplot(gs[2,0])  # Trace Velocity Plot
 ax3 = plt.subplot(gs[3,0])  # Scatter Plot
-
 
 for ii in range(nbands):
 
@@ -336,12 +367,11 @@ for ii in range(nbands):
     normal_vel = pl.Normalize(0.2,0.5)
     colors_vel = pl.cm.jet(normal_vel(vel_float))
 
-
-
+    # Loop through each narrow band results vector and plot rectangles/scatter points
     for jj in range(len(t_float)-1):
         width_temp = t_float[jj+1] - t_float[jj]
-        if mdccm_float[jj] >= 0.6: 
-        #if np.greater(mdccmlist[ii], 0.6):
+        if mdccm_float[jj] >= mdccm_thresh: 
+        #if np.greater(mdccmlist[ii], mdccm_thresh):
             x_temp = t_float[jj]
             y_temp = tempfmin
 
@@ -358,7 +388,24 @@ for ii in range(nbands):
             sc.set_clim(cax)
 
 
-   
+### Add colorbars ###
+# Add colorbar to backazimuth plot
+cax = plt.subplot(gs[1,1]) 
+cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_baz,orientation='vertical', ticks=[0,90,180,270,360]) 
+cax.set_ylabel('Backazimuth [deg]', fontsize=fonts+2, fontweight='bold')
+
+# Add colorbar to trace velocity plot
+cax = plt.subplot(gs[2,1]) 
+cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_vel,orientation='vertical') 
+cax.set_ylabel('Trace Velocity [km/s]', fontsize=fonts+2, fontweight='bold')
+
+# Add colorbar to scatter plot
+cbaxes = plt.subplot(gs[3,1]) 
+hc = plt.colorbar(sc, cax=cbaxes,orientation='vertical') 
+cbaxes.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
+
+
+### Format axes ###
 # Pressure plot 
 ax0.xaxis_date()
 ax0.set_xlim(timevec[0], timevec[-1])
@@ -391,26 +438,7 @@ ax3.set_ylim(0,360)
 ax3.set_xlim(t_float[0],t_float[-1])
 
 
-
-# Add colorbar to backazimuth plot
-cax = plt.subplot(gs[1,1]) 
-cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_baz,orientation='vertical', ticks=[0,90,180,270,360]) 
-cax.set_ylabel('Backazimuth [deg]', fontsize=fonts+2, fontweight='bold')
-
-# Add colorbar to trace velocity plot
-cax = plt.subplot(gs[2,1]) 
-cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_vel,orientation='vertical') 
-cax.set_ylabel('Trace Velocity [km/s]', fontsize=fonts+2, fontweight='bold')
-
-# Add colorbar to scatter plot
-cbaxes = plt.subplot(gs[3,1]) 
-hc = plt.colorbar(sc, cax=cbaxes,orientation='vertical') 
-cbaxes.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
-
-
-###################
 ### Save figure ###
-###################
 plt.tight_layout()
 fig.savefig(save_dir + 'LeastSquaresButPMCC', dpi=dpi_num)
 plt.close(fig)
