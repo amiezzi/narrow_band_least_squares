@@ -62,23 +62,23 @@ lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
 calib = -0.000113  # Pa/count
 
 #data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'                                      # directory where data is located
-#data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
-data_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'          # directory where data is located
+data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
+#data_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'          # directory where data is located
 
 
 ### Filtering ###
 FMIN = 0.1                  # [Hz]
-FMAX = 10                   # [Hz] #should not exceed 20 Hz 
-nbands = 10                 # indicates number of frequency bands 
-freq_band_type = 'log'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
-filter_type = 'cheby1'      # filter type; 'butter', 'cheby1'
+FMAX = 15                   # [Hz] #should not exceed 20 Hz 
+nbands = 15                 # indicates number of frequency bands 
+freq_band_type = 'linear'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
+filter_type = 'butter'      # filter type; 'butter', 'cheby1'
 
 
 ### Window Length ###
 WINOVER = 0.5               # window overlap
-window_length = 'constant'  # 'constant' or '1/f'
+window_length = 'constant'  # 'constant' or 'adaptive'
 WINLEN = 50                 # window length [s]; used if window_length = 'constant' AND if window_length = '1/f' (because of broadband processing)
-WINLEN_1 = 200                 # window length for band 1 (lowest frequency) [s]; only used if window_length = '1/f'
+WINLEN_1 = 100                 # window length for band 1 (lowest frequency) [s]; only used if window_length = '1/f'
 WINLEN_X = 30                 # window length for band X (highest frequency) [s]; only used if window_length = '1/f'
 
 ### Array processing ###
@@ -87,8 +87,8 @@ mdccm_thresh = 0.6          # Threshold value of MdCCM for plotting; Must be bet
 
 ### Figure Save Options ###
 #save_dir = '/Users/snehabhetanabhotla/Desktop/Research/Plots/LeastSquaresCode/LeastSquaresButPMCC/'			     # directory in which to save figures
-#save_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'         # directory in which to save figures
-save_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'            # directory in which to save figures
+save_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'         # directory in which to save figures
+#save_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'            # directory in which to save figures
 file_type = '.png'                          # file save type
 dpi_num = 300                               # dots per inch for plot save
 fonts = 14                                  # default font size for plotting
@@ -116,7 +116,6 @@ elif SOURCE == 'local':
     st = Stream()
     st += read(data_dir + '*.mseed')
     st.trim(START, END)
-
     # Calibrate the data 
     for ii in range (len(st)):
         tr = st[ii]
@@ -150,14 +149,17 @@ elif freq_band_type == 'log':
 ##################################################################################
 #############################
 ### Set Up Window Lengths ###
-#############################   
-WINLEN_list = []                                    
+############################# 
+                                  
 if window_length == 'constant':
+    WINLEN_list = [] 
     for ii in range(nbands):
         WINLEN_list.append(WINLEN)
-#elif window_length == '1/f':
-
-
+elif window_length == 'adaptive':
+    # varies linearly with period
+    WINLEN_list = np.linspace(WINLEN_1, WINLEN_X, num=nbands)
+    WINLEN_list = [int(item) for item in WINLEN_list]
+print(WINLEN_list)
 ### Plot ###
 height = []
 for ii in range(nbands):
@@ -210,7 +212,7 @@ plt.close(fig)
 ##################################
 stf_broad = st.copy()
 if filter_type == 'butter': 
-        stf_broad.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=2, zerophase = True)
+    stf_broad.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=2, zerophase = True)
 elif filter_type == 'cheby1': ### DONT USE YET; NEEDS TO BE FIXED
     order = 2
     ripple = 0.01
@@ -233,12 +235,15 @@ stf_broad.taper(max_percentage=0.01)    # Taper the waveforms
 # Broadband array processing
 vel, baz, t, mdccm, stdict, sig_tau = ltsva(st, rij, WINLEN, WINOVER, ALPHA)
 
+
 fig1, axs1 = array_plot(st, t, mdccm, vel, baz, ccmplot=True, mcthresh=mdccm_thresh, sigma_tau=sig_tau)
 
 
 ### Save figure ###
 fig1.savefig(save_dir + 'LeastSquares', dpi=dpi_num)
 plt.close(fig1)
+
+
 
 ##################################################################################
 ###############################
@@ -253,12 +258,27 @@ plt.close(fig1)
 #sig_taulist = [] #? 
 
 #filteredst = np.empty(shape=(nbands, st[0].stats.npts), dtype=float)
+if window_length == 'constant':
+    sampinc=int((1-WINOVER)*WINLEN)
+elif window_length == 'adaptive':
+    sampinc=int((1-WINOVER)*WINLEN_X)
+npts=len(st[0].data)
+its=np.arange(0,npts,sampinc)
+nits=len(its)-1
+Fs = stf_broad[0].stats.sampling_rate
+vector_len = int(nits/Fs)
 
+# Initialize arrays to be as large as the number of windows for the highest frequency band
+vel_array = np.empty((nbands,vector_len))
+baz_array = np.empty((nbands,vector_len))
+mdccm_array = np.empty((nbands,vector_len))
+t_array = np.empty((nbands,vector_len))
 
 
 ########################################
 ### Run Narrow Band Array Processing ###
 ########################################
+num_compute_list = []
 for ii in range(nbands): 
     tempst_filter = st.copy()
     tempfmin = freqlist[ii]
@@ -313,18 +333,14 @@ for ii in range(nbands):
     ####################################
     ### Save Array Processing Output ###
     ####################################
-    if ii == 0:
-        vel_array = vel_float
-        baz_array = baz_float
-        mdccm_array = mdccm_float
-        t_array = t_float
-    else: 
-        vel_array = np.vstack([vel_array, vel_float])
-        baz_array = np.vstack([baz_array, baz_float])
-        mdccm_array = np.vstack([mdccm_array, mdccm_float])
-        t_array = np.vstack([t_array, t_float])
+    vel_array[ii,:len(vel_float)] = vel_float
+    baz_array[ii,:len(baz_float)] = baz_float
+    mdccm_array[ii,:len(mdccm_float)] = mdccm_float
+    t_array[ii,:len(t_float)] = t_float
+    num_compute_list.append(len(vel_float))
 
-
+print(vel_array.shape)
+print(num_compute_list)
 
 ##################################################################################
 ######################
@@ -354,10 +370,16 @@ for ii in range(nbands):
     tempfavg = tempfmin + (height_temp/2)        # center point of the frequency interval
 
     # Gather array processing results for this narrow frequency band
-    vel_float = vel_array[ii,:]
-    baz_float = baz_array[ii,:]
-    mdccm_float = mdccm_array[ii,:]
-    t_float = t_array[ii,:]
+    vel_temp = vel_array[ii,:]
+    baz_temp = baz_array[ii,:]
+    mdccm_temp = mdccm_array[ii,:]
+    t_temp = t_array[ii,:]
+
+    # Trim each vector to ignore NAN and zero values
+    vel_float = vel_temp[:num_compute_list[ii]]
+    baz_float = baz_temp[:num_compute_list[ii]]
+    mdccm_float = mdccm_temp[:num_compute_list[ii]]
+    t_float = t_temp[:num_compute_list[ii]]
 
     # Initialize colorbars
     #normal = pl.Normalize(baz_float.min(), baz_float.max())
