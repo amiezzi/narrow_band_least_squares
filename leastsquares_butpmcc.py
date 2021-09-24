@@ -51,6 +51,18 @@ START = UTCDateTime('2018-12-19T01:45:00')
 END = START + 20*60
 '''
 
+
+'''
+# Cleveland IRIS Example
+NETWORK = 'AV'
+STATION = 'DLL*'
+LOCATION = '*'
+CHANNEL = 'HD*'
+START = UTCDateTime('2017-01-02T23:00:00')
+END = START + 60*60
+'''
+
+
 # Local Example
 START = UTCDateTime('2010-05-28T13:30:00')          # start time for processing (UTCDateTime)
 END = UTCDateTime('2010-05-28T15:30:00')            # end time for processing (UTCDateTime)
@@ -68,18 +80,20 @@ data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Tra
 
 ### Filtering ###
 FMIN = 0.1                  # [Hz]
-FMAX = 15                   # [Hz] #should not exceed 20 Hz 
-nbands = 15                 # indicates number of frequency bands 
+FMAX = 15.                   # [Hz] #should not exceed 20 Hz 
+nbands = 15                # indicates number of frequency bands 
 freq_band_type = 'linear'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
-filter_type = 'butter'      # filter type; 'butter', 'cheby1'
+filter_type = 'cheby1'      # filter type; 'butter', 'cheby1'
+filter_order = 2
+filter_ripple = 0.01
 
 
 ### Window Length ###
 WINOVER = 0.5               # window overlap
-window_length = 'constant'  # 'constant' or 'adaptive'
+window_length = 'adaptive'  # 'constant' or 'adaptive'
 WINLEN = 50                 # window length [s]; used if window_length = 'constant' AND if window_length = '1/f' (because of broadband processing)
-WINLEN_1 = 100                 # window length for band 1 (lowest frequency) [s]; only used if window_length = '1/f'
-WINLEN_X = 30                 # window length for band X (highest frequency) [s]; only used if window_length = '1/f'
+WINLEN_1 = 60              # window length for band 1 (lowest frequency) [s]; only used if window_length = '1/f'
+WINLEN_X = 30               # window length for band X (highest frequency) [s]; only used if window_length = '1/f'
 
 ### Array processing ###
 ALPHA = 1.0                 # Use ordinary least squares processing (not trimmed least squares)
@@ -160,11 +174,15 @@ elif window_length == 'adaptive':
     WINLEN_list = np.linspace(WINLEN_1, WINLEN_X, num=nbands)
     WINLEN_list = [int(item) for item in WINLEN_list]
 print(WINLEN_list)
+
+
 ### Plot ###
 height = []
 for ii in range(nbands):
     height.append(freqlist[ii+1]- freqlist[ii])
 
+
+'''
 fig = plt.figure(figsize=(5,5), dpi=dpi_num)
 gs = gridspec.GridSpec(1,1)
 
@@ -179,7 +197,7 @@ ax0.set_ylabel('Frequency [Hz]',fontsize=fonts+2, fontweight='bold')
 plt.tight_layout()
 fig.savefig(save_dir + 'Window_Length_and_Frequency_Bands', dpi=dpi_num)
 plt.close(fig)
-
+'''
 ##################################################################################
 ######################
 ### Array Geometry ###
@@ -188,6 +206,7 @@ plt.close(fig)
 # Convert array coordinates to array processing geometry
 rij = getrij(latlist, lonlist)
 
+'''
 ### Plot array geometry ###
 fig = plt.figure(figsize=(5,5), dpi=dpi_num)
 gs = gridspec.GridSpec(1,1)
@@ -203,7 +222,7 @@ ax0.grid()
 plt.tight_layout()
 fig.savefig(save_dir + 'Array_Geometry', dpi=dpi_num)
 plt.close(fig)
-
+'''
 
 
 ##################################################################################
@@ -211,16 +230,16 @@ plt.close(fig)
 ### Broadband Array Processing ###
 ##################################
 stf_broad = st.copy()
+Fs = stf_broad[0].stats.sampling_rate
 if filter_type == 'butter': 
-    stf_broad.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=2, zerophase = True)
-elif filter_type == 'cheby1': ### DONT USE YET; NEEDS TO BE FIXED
-    order = 2
-    ripple = 0.01
-    Fs = stf_broad[0].stats.sampling_rate
+    stf_broad.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=filter_order, zerophase = True)
+    sos = signal.iirfilter(filter_order, [FMIN, FMAX], btype='band',ftype='butter', fs=Fs, output='sos')    
+elif filter_type == 'cheby1': 
     #Wn = [FMIN/(Fs/2), FMAX/(Fs/2)]
     Wn = [FMIN, FMAX]
     #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
-    sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
+    #sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
+    sos = signal.iirfilter(filter_order, [FMIN, FMAX], rp=filter_ripple, btype='band', analog=False, ftype='cheby1', fs=Fs,output='sos')
     for ii in range(len(st)):
         # put signal in numpy array
         temp_array = stf_broad[ii].data
@@ -233,10 +252,10 @@ elif filter_type == 'cheby1': ### DONT USE YET; NEEDS TO BE FIXED
 stf_broad.taper(max_percentage=0.01)    # Taper the waveforms
 
 # Broadband array processing
-vel, baz, t, mdccm, stdict, sig_tau = ltsva(st, rij, WINLEN, WINOVER, ALPHA)
+vel, baz, t, mdccm, stdict, sig_tau = ltsva(stf_broad, rij, WINLEN, WINOVER, ALPHA)
 
 
-fig1, axs1 = array_plot(st, t, mdccm, vel, baz, ccmplot=True, mcthresh=mdccm_thresh, sigma_tau=sig_tau)
+fig1, axs1 = array_plot(stf_broad, t, mdccm, vel, baz, ccmplot=True, mcthresh=mdccm_thresh, sigma_tau=sig_tau)
 
 
 ### Save figure ###
@@ -244,6 +263,38 @@ fig1.savefig(save_dir + 'LeastSquares', dpi=dpi_num)
 plt.close(fig1)
 
 
+
+### Plot filter frequency reponse ###
+FMINL = math.log(0.01, 10)
+FMAXL = math.log(Fs/2, 10)
+freq_resp_list = np.logspace(FMINL, FMAXL, num = 1000)
+#b, a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
+w_broad, h_broad = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
+#w = w * (Fs/2) # convert to Hz
+
+#print(h)
+
+fig = plt.figure(figsize=(8,5), dpi=dpi_num)
+gs = gridspec.GridSpec(1,1)
+
+ax0 = plt.subplot(gs[0,0]) 
+ax0.semilogx(w_broad, 20 * np.log10(abs(h_broad)))
+#ax0.plot(w, 20 * np.log10(abs(h)))
+ax0.axvline(x=FMIN, color='k', ls='--')
+ax0.axvline(x=FMAX, color='k', ls='--')
+ax0.set_ylabel('Amplitude [dB]', fontsize=fonts+2, fontweight='bold')
+ax0.set_xlabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
+#ax0.set_xlim(0,10)
+ax0.set_ylim(-5,0.1)
+ax0.text(0.02, 0.05, 'Filter Type = ' + filter_type, transform=ax0.transAxes)
+ax0.text(0.02, 0.1, 'Filter Order = ' + str(filter_order), transform=ax0.transAxes)
+if filter_type == 'cheby1':
+    ax0.text(0.02, 0.15, 'Ripple = ' + str(filter_ripple), transform=ax0.transAxes)
+
+### Save figure ###
+plt.tight_layout()
+fig.savefig(save_dir + 'Filter_Frequency_Response_Broadband', dpi=dpi_num)
+plt.close(fig)
 
 ##################################################################################
 ###############################
@@ -274,6 +325,10 @@ baz_array = np.empty((nbands,vector_len))
 mdccm_array = np.empty((nbands,vector_len))
 t_array = np.empty((nbands,vector_len))
 
+# Initialize Frequency response arrays
+w_array = np.empty((nbands,len(w_broad)),dtype = 'complex_')
+h_array = np.empty((nbands,len(h_broad)),dtype = 'complex_')
+
 
 ########################################
 ### Run Narrow Band Array Processing ###
@@ -281,18 +336,18 @@ t_array = np.empty((nbands,vector_len))
 num_compute_list = []
 for ii in range(nbands): 
     tempst_filter = st.copy()
+    Fs = tempst_filter[0].stats.sampling_rate
     tempfmin = freqlist[ii]
     tempfmax = freqlist[ii+1]
     if filter_type == 'butter': 
-        tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=2, zerophase = True)
-    elif filter_type == 'cheby1': ### DONT USE YET; NEEDS TO BE FIXED
-        order = 2
-        ripple = 0.01
-        Fs = tempst_filter[0].stats.sampling_rate
+        tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=filter_order, zerophase = True)
+        sos = signal.iirfilter(filter_order, [tempfmin, tempfmax], btype='band',ftype='butter', fs=Fs, output='sos')    
+    elif filter_type == 'cheby1': 
         #Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
         Wn = [tempfmin, tempfmax]
         #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
-        sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
+        #sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
+        sos = signal.iirfilter(filter_order, Wn, rp=filter_ripple, btype='band', analog=False, ftype='cheby1', fs=Fs,output='sos')
         for jj in range(len(st)):
             # put signal in numpy array
             temp_array = tempst_filter[jj].data
@@ -301,6 +356,11 @@ for ii in range(nbands):
             #filtered =signal.filtfilt(b,a,temp_array)
             # transform signal back to st
             tempst_filter[jj].data = filtered
+    w, h = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
+    w_array[ii,:] = w
+    h_array[ii,:] = h
+
+
 
     tempst_filter.taper(max_percentage=0.01)    # Taper the waveforms
     #filteredst.append(tempst_filter)
@@ -341,6 +401,110 @@ for ii in range(nbands):
 
 print(vel_array.shape)
 print(num_compute_list)
+
+
+
+'''
+##########################
+### Freq Response Plot ###
+##########################
+fig = plt.figure(figsize=(8,5), dpi=dpi_num)
+gs = gridspec.GridSpec(1,1)
+
+ax0 = plt.subplot(gs[0,0]) 
+for ii in range(nbands):
+    temp_w = w_array[ii,:-1]
+    temp_h = h_array[ii,:-1]
+    #if ii == 0:
+        #print(temp_h)
+    ax0.semilogx(temp_w, 20 * np.log10(abs(temp_h)))
+    #ax0.plot(temp_w, 20 * np.log10(abs(temp_h)))
+    ax0.axvline(x=freqlist[ii], color='k', ls='--')
+#ax0.plot(w, 20 * np.log10(abs(h)))
+#ax0.axvline(x=FMIN)
+#ax0.axvline(x=FMAX)
+ax0.axvline(x=freqlist[-1], color='k', ls='--')
+ax0.set_ylabel('Amplitude [dB]', fontsize=fonts+2, fontweight='bold')
+ax0.set_xlabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
+ax0.set_xlim(0.05,5)
+ax0.set_ylim(-3,0.1)
+ax0.text(0.02, 0.05, 'Filter Type = ' + filter_type, transform=ax0.transAxes)
+ax0.text(0.02, 0.1, 'Filter Order = ' + str(filter_order), transform=ax0.transAxes)
+if filter_type == 'cheby1':
+    ax0.text(0.02, 0.15, 'Ripple = ' + str(filter_ripple), transform=ax0.transAxes)
+
+### Save figure ###
+plt.tight_layout()
+fig.savefig(save_dir + 'Filter_Frequency_Response_Narrow_band', dpi=dpi_num)
+plt.close(fig)
+'''
+
+
+
+
+
+##################################################################################
+##################################
+### Processing Parameters Plot ###
+##################################
+fig = plt.figure(figsize=(10,10), dpi=dpi_num)
+gs = gridspec.GridSpec(2,2)
+
+
+ax0 = plt.subplot(gs[0,0])
+ax0 = plt.subplot(gs[0,0]) 
+ax0.scatter(rij[0], rij[1]) 
+ax0.set_xlabel('X [km]', fontsize=fonts+2, fontweight='bold')
+ax0.set_ylabel('Y [km]', fontsize=fonts+2, fontweight='bold')
+ax0.axis('square')
+ax0.grid()
+ax0.set_title('a) Array Geometry', loc='left', fontsize=fonts+2, fontweight='bold')
+
+
+ax1 = plt.subplot(gs[0,1]) 
+ax1.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k')
+#ax0.scatter(freqlist[:-1], WINLEN_list)
+ax1.set_xlabel('Window Length [s]',fontsize=fonts+2, fontweight='bold')
+ax1.set_ylabel('Frequency [Hz]',fontsize=fonts+2, fontweight='bold')
+ax1.set_title('b) Window Length', loc='left', fontsize=fonts+2, fontweight='bold')
+ax1.text(0.02, 0.95, '# of Bands = ' + str(nbands), transform=ax1.transAxes, horizontalalignment='left', fontsize=fonts-2)
+ax1.text(0.98, 0.95, 'FMIN = ' + str(FMIN) + ', FMAX = ' + str(FMAX), transform=ax1.transAxes, horizontalalignment='right', fontsize=fonts-2)
+ax1.set_ylim(-0.1,FMAX+1)
+
+
+ax2 = plt.subplot(gs[1,0:2]) 
+for ii in range(nbands):
+    temp_w = w_array[ii,:-1]
+    temp_h = h_array[ii,:-1]
+    #if ii == 0:
+        #print(temp_h)
+    ax2.semilogx(temp_w, 20 * np.log10(abs(temp_h)))
+    #ax0.plot(temp_w, 20 * np.log10(abs(temp_h)))
+    ax2.axvline(x=freqlist[ii], ymax=0.9, color='k', ls='--')
+#ax0.plot(w, 20 * np.log10(abs(h)))
+#ax0.axvline(x=FMIN)
+#ax0.axvline(x=FMAX)
+ax2.axvline(x=freqlist[-1], ymax=0.9, color='k', ls='--')
+ax2.set_ylabel('Amplitude [dB]', fontsize=fonts+2, fontweight='bold')
+ax2.set_xlabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
+ax2.set_xlim(FMIN-0.01,FMAX+1)
+ax2.set_ylim(-3,0.4)
+ax2.set_title('c) Narrow Band Filters', loc='left', fontsize=fonts+2, fontweight='bold')
+ax2.text(0.02, 0.95, 'Filter Type = ' + filter_type, transform=ax2.transAxes, horizontalalignment='left', fontsize=fonts-2)
+ax2.text(0.98, 0.95, 'Filter Order = ' + str(filter_order), transform=ax2.transAxes, horizontalalignment='right', fontsize=fonts-2)
+if filter_type == 'cheby1':
+    ax2.text(0.5, 0.95, 'Ripple = ' + str(filter_ripple), transform=ax2.transAxes, horizontalalignment='center', fontsize=fonts-2)
+
+
+### Save figure ###
+plt.tight_layout()
+fig.savefig(save_dir + 'Processing_Parameters', dpi=dpi_num)
+plt.close(fig)
+
+
+
+
+
 
 ##################################################################################
 ######################
