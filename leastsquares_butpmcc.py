@@ -30,6 +30,7 @@ from lts_array import ltsva
 #import matplotlib.dates as mdates
 #from datetime import datetime, timedelta
 from scipy import signal 
+import multiprocessing
 
 
 ##############################################################################
@@ -39,9 +40,9 @@ from scipy import signal
 
 ### Data information ###
 # Data collection
-SOURCE = 'local'                                     # Data source; 'IRIS' or 'local'
+SOURCE = 'IRIS'                                     # Data source; 'IRIS' or 'local'
 
-'''
+
 # IRIS Example
 NETWORK = 'IM'
 STATION = 'I53H?'
@@ -49,11 +50,12 @@ LOCATION = '*'
 CHANNEL = 'BDF'
 START = UTCDateTime('2018-12-19T01:45:00')
 END = START + 20*60
-'''
 
 
+
 '''
-# Cleveland IRIS Example
+
+# Bogoslof IRIS Example
 NETWORK = 'AV'
 STATION = 'DLL*'
 LOCATION = '*'
@@ -62,7 +64,7 @@ START = UTCDateTime('2017-01-02T23:00:00')
 END = START + 60*60
 '''
 
-
+'''
 # Local Example
 START = UTCDateTime('2010-05-28T13:30:00')          # start time for processing (UTCDateTime)
 END = UTCDateTime('2010-05-28T15:30:00')            # end time for processing (UTCDateTime)
@@ -76,13 +78,13 @@ calib = -0.000113  # Pa/count
 #data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'                                      # directory where data is located
 data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
 #data_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'          # directory where data is located
-
+'''
 
 ### Filtering ###
-FMIN = 0.1                  # [Hz]
-FMAX = 15.                   # [Hz] #should not exceed 20 Hz 
-nbands = 15                # indicates number of frequency bands 
-freq_band_type = 'linear'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
+FMIN = 0.07                  # [Hz]
+FMAX = 3.                   # [Hz] #should not exceed 20 Hz 
+nbands = 10                # indicates number of frequency bands 
+freq_band_type = 'log'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
 filter_type = 'cheby1'      # filter type; 'butter', 'cheby1'
 filter_order = 2
 filter_ripple = 0.01
@@ -182,22 +184,6 @@ for ii in range(nbands):
     height.append(freqlist[ii+1]- freqlist[ii])
 
 
-'''
-fig = plt.figure(figsize=(5,5), dpi=dpi_num)
-gs = gridspec.GridSpec(1,1)
-
-ax0 = plt.subplot(gs[0,0])
-ax0.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k')
-#ax0.scatter(freqlist[:-1], WINLEN_list)
-
-ax0.set_xlabel('Window Length [s]',fontsize=fonts+2, fontweight='bold')
-ax0.set_ylabel('Frequency [Hz]',fontsize=fonts+2, fontweight='bold')
-
-### Save figure ###
-plt.tight_layout()
-fig.savefig(save_dir + 'Window_Length_and_Frequency_Bands', dpi=dpi_num)
-plt.close(fig)
-'''
 ##################################################################################
 ######################
 ### Array Geometry ###
@@ -206,23 +192,6 @@ plt.close(fig)
 # Convert array coordinates to array processing geometry
 rij = getrij(latlist, lonlist)
 
-'''
-### Plot array geometry ###
-fig = plt.figure(figsize=(5,5), dpi=dpi_num)
-gs = gridspec.GridSpec(1,1)
-
-ax0 = plt.subplot(gs[0,0]) 
-ax0.scatter(rij[0], rij[1]) 
-ax0.set_xlabel('X [km]', fontsize=fonts+2, fontweight='bold')
-ax0.set_ylabel('Y [km]', fontsize=fonts+2, fontweight='bold')
-ax0.axis('square')
-ax0.grid()
-
-### Save figure ###
-plt.tight_layout()
-fig.savefig(save_dir + 'Array_Geometry', dpi=dpi_num)
-plt.close(fig)
-'''
 
 
 ##################################################################################
@@ -300,15 +269,6 @@ plt.close(fig)
 ###############################
 ### Initialize Numpy Arrays ###
 ###############################
-#filteredst = [] #list of filtered streams 
-#vellist = [] #velocity list 
-#bazlist = [] #back azimuth list
-#tlist = [] #time? 
-#mdccmlist = [] #mdccm 
-#stdictlist = [] #?
-#sig_taulist = [] #? 
-
-#filteredst = np.empty(shape=(nbands, st[0].stats.npts), dtype=float)
 if window_length == 'constant':
     sampinc=int((1-WINOVER)*WINLEN)
 elif window_length == 'adaptive':
@@ -328,6 +288,11 @@ t_array = np.empty((nbands,vector_len))
 # Initialize Frequency response arrays
 w_array = np.empty((nbands,len(w_broad)),dtype = 'complex_')
 h_array = np.empty((nbands,len(h_broad)),dtype = 'complex_')
+
+
+# Parallel Processing
+num_cores = multiprocessing.cpu_count()
+print(num_cores)
 
 
 ########################################
@@ -404,43 +369,6 @@ print(num_compute_list)
 
 
 
-'''
-##########################
-### Freq Response Plot ###
-##########################
-fig = plt.figure(figsize=(8,5), dpi=dpi_num)
-gs = gridspec.GridSpec(1,1)
-
-ax0 = plt.subplot(gs[0,0]) 
-for ii in range(nbands):
-    temp_w = w_array[ii,:-1]
-    temp_h = h_array[ii,:-1]
-    #if ii == 0:
-        #print(temp_h)
-    ax0.semilogx(temp_w, 20 * np.log10(abs(temp_h)))
-    #ax0.plot(temp_w, 20 * np.log10(abs(temp_h)))
-    ax0.axvline(x=freqlist[ii], color='k', ls='--')
-#ax0.plot(w, 20 * np.log10(abs(h)))
-#ax0.axvline(x=FMIN)
-#ax0.axvline(x=FMAX)
-ax0.axvline(x=freqlist[-1], color='k', ls='--')
-ax0.set_ylabel('Amplitude [dB]', fontsize=fonts+2, fontweight='bold')
-ax0.set_xlabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
-ax0.set_xlim(0.05,5)
-ax0.set_ylim(-3,0.1)
-ax0.text(0.02, 0.05, 'Filter Type = ' + filter_type, transform=ax0.transAxes)
-ax0.text(0.02, 0.1, 'Filter Order = ' + str(filter_order), transform=ax0.transAxes)
-if filter_type == 'cheby1':
-    ax0.text(0.02, 0.15, 'Ripple = ' + str(filter_ripple), transform=ax0.transAxes)
-
-### Save figure ###
-plt.tight_layout()
-fig.savefig(save_dir + 'Filter_Frequency_Response_Narrow_band', dpi=dpi_num)
-plt.close(fig)
-'''
-
-
-
 
 
 ##################################################################################
@@ -510,8 +438,8 @@ plt.close(fig)
 ######################
 ### PMCC-like plot ###
 ######################
-fig = plt.figure(figsize=(15,13), dpi=dpi_num)
-gs = gridspec.GridSpec(4,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1])
+fig = plt.figure(figsize=(13,17), dpi=dpi_num)
+gs = gridspec.GridSpec(6,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1,1,1])
 #cm = 'RdYlBu_r'
 cm = 'jet'
 cax = (FMIN, FMAX)
@@ -521,9 +449,11 @@ ax0 = plt.subplot(gs[0,0])  # Pressure Plot
 ax0.plot(timevec, stf_broad[0], 'k') # plots pressure for the first band
 
 # Initialize other plots
-ax1 = plt.subplot(gs[1,0])  # Backazimuth Plot
-ax2 = plt.subplot(gs[2,0])  # Trace Velocity Plot
-ax3 = plt.subplot(gs[3,0])  # Scatter Plot
+ax1 = plt.subplot(gs[1,0])  # MdCCM Plot
+ax2 = plt.subplot(gs[2,0])  # Backazimuth Plot
+ax3 = plt.subplot(gs[3,0])  # Trace Velocity Plot
+ax4 = plt.subplot(gs[4,0])  # Scatter Plot
+ax5 = plt.subplot(gs[5,0])  # Scatter Plot Trace Velocity
 
 for ii in range(nbands):
 
@@ -554,6 +484,11 @@ for ii in range(nbands):
     normal_vel = pl.Normalize(0.2,0.5)
     colors_vel = pl.cm.jet(normal_vel(vel_float))
 
+    #normal_vel = pl.Normalize(vel_float.min(), vel_float.max()) # This re-normalizing for each narrow frequency band (not right)
+    normal_mdccm = pl.Normalize(0.,1.0)
+    colors_mdccm = pl.cm.jet(normal_mdccm(mdccm_float))
+
+
     # Loop through each narrow band results vector and plot rectangles/scatter points
     for jj in range(len(t_float)-1):
         width_temp = t_float[jj+1] - t_float[jj]
@@ -562,37 +497,71 @@ for ii in range(nbands):
             x_temp = t_float[jj]
             y_temp = tempfmin
 
+            # MdCCM Plot 
+            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_mdccm[jj])
+            ax1.add_patch(rect)
+
             # Backazimuth plot 
             rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_baz[jj])
-            ax1.add_patch(rect)
+            ax2.add_patch(rect)
 
             # Trace Velocity Plot 
             rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_vel[jj])
-            ax2.add_patch(rect)
+            ax3.add_patch(rect)
+
 
             # Scatter plot
-            sc = ax3.scatter(t_float[jj], baz_float[jj], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
+            sc = ax4.scatter(t_float[jj], baz_float[jj], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
             sc.set_clim(cax)
 
+            # Scatter plot
+            sc_vel = ax5.scatter(t_float[jj], vel_float[jj], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
+            sc_vel.set_clim(cax)
 
+    # MdCCM Loop through each narrow band results vector and plot rectangles/scatter points
+    for jj in range(len(t_float)-1):
+        width_temp = t_float[jj+1] - t_float[jj]
+        if mdccm_float[jj] < mdccm_thresh: 
+            x_temp = t_float[jj]
+            y_temp = tempfmin
+            # MdCCM Plot 
+            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_mdccm[jj], alpha=0.5)
+            ax1.add_patch(rect)
+
+
+#####################
 ### Add colorbars ###
-# Add colorbar to backazimuth plot
+#####################
+
+# Add colorbar to trace velocity plot
 cax = plt.subplot(gs[1,1]) 
+cb1 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_mdccm,orientation='vertical') 
+cax.set_ylabel('MdCCM', fontsize=fonts+2, fontweight='bold')
+
+# Add colorbar to backazimuth plot
+cax = plt.subplot(gs[2,1]) 
 cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_baz,orientation='vertical', ticks=[0,90,180,270,360]) 
 cax.set_ylabel('Backazimuth [deg]', fontsize=fonts+2, fontweight='bold')
 
 # Add colorbar to trace velocity plot
-cax = plt.subplot(gs[2,1]) 
+cax = plt.subplot(gs[3,1]) 
 cb2 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_vel,orientation='vertical') 
 cax.set_ylabel('Trace Velocity [km/s]', fontsize=fonts+2, fontweight='bold')
 
 # Add colorbar to scatter plot
-cbaxes = plt.subplot(gs[3,1]) 
+cbaxes = plt.subplot(gs[4,1]) 
 hc = plt.colorbar(sc, cax=cbaxes,orientation='vertical') 
 cbaxes.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
 
+# Add colorbar to scatter plot for trace velocity
+cbaxes_vel = plt.subplot(gs[5,1]) 
+hc_vel = plt.colorbar(sc_vel, cax=cbaxes_vel,orientation='vertical') 
+cbaxes_vel.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
 
+
+###################
 ### Format axes ###
+###################
 # Pressure plot 
 ax0.xaxis_date()
 ax0.set_xlim(timevec[0], timevec[-1])
@@ -600,7 +569,7 @@ ax0.set_ylabel('Pressure [Pa]', fontsize=fonts+2, fontweight='bold')
 ax0.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
 ax0.set_title('a)', loc='left', fontsize=fonts+2, fontweight='bold')
 
-# Backazimuth Plot
+# MdCCM Plot
 ax1.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')  
 ax1.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
 ax1.set_title('b)', loc='left', fontsize=fonts+2, fontweight='bold')
@@ -608,7 +577,7 @@ ax1.xaxis_date()
 ax1.set_ylim(FMIN,FMAX)
 ax1.set_xlim(t_float[0],t_float[-1])
 
-# Trace Velocity Plot
+# Backazimuth Plot
 ax2.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')  
 ax2.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
 ax2.set_title('c)', loc='left', fontsize=fonts+2, fontweight='bold')
@@ -616,16 +585,34 @@ ax2.xaxis_date()
 ax2.set_ylim(FMIN,FMAX)
 ax2.set_xlim(t_float[0],t_float[-1])
 
-# Scatter Plot
-ax3.set_ylabel('Backazimuth [deg]', fontsize=fonts+2, fontweight='bold')  
+# Trace Velocity Plot
+ax3.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')  
 ax3.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
 ax3.set_title('d)', loc='left', fontsize=fonts+2, fontweight='bold')
 ax3.xaxis_date()
-ax3.set_ylim(0,360)
+ax3.set_ylim(FMIN,FMAX)
 ax3.set_xlim(t_float[0],t_float[-1])
 
+# Scatter Plot
+ax4.set_ylabel('Backazimuth [deg]', fontsize=fonts+2, fontweight='bold')  
+ax4.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
+ax4.set_title('e)', loc='left', fontsize=fonts+2, fontweight='bold')
+ax4.xaxis_date()
+ax4.set_ylim(0,360)
+ax4.set_xlim(t_float[0],t_float[-1])
 
+# Scatter Plot
+ax5.set_ylabel('Trace Velocity [km/s]', fontsize=fonts+2, fontweight='bold')  
+ax5.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
+ax5.set_title('f)', loc='left', fontsize=fonts+2, fontweight='bold')
+ax5.xaxis_date()
+ax5.set_ylim(0.25,0.45)
+ax5.set_xlim(t_float[0],t_float[-1])
+
+
+###################
 ### Save figure ###
+###################
 plt.tight_layout()
 fig.savefig(save_dir + 'LeastSquaresButPMCC', dpi=dpi_num)
 plt.close(fig)
