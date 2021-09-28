@@ -1,6 +1,3 @@
-###############
-### Imports ###
-###############
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -15,10 +12,7 @@ fonts = 14
 rcParams.update({'font.size': fonts})
 
 
-
-##################################################################################
 def broad_filter_response_plot(w, h, FMIN, FMAX, filter_type, filter_order, filter_ripple):
-##################################################################################
 	'''
 	Plots the filter frequency response for standard least squares processing
 	Args:
@@ -47,13 +41,12 @@ def broad_filter_response_plot(w, h, FMIN, FMAX, filter_type, filter_order, filt
 	ax0.text(0.02, 0.1, 'Filter Order = ' + str(filter_order), transform=ax0.transAxes)
 	if filter_type == 'cheby1':
 	    ax0.text(0.02, 0.15, 'Ripple = ' + str(filter_ripple), transform=ax0.transAxes)
-
+	plt.tight_layout()
 	return fig
 
 
-##################################################################################
+
 def processing_parameters_plot(rij, freqlist, WINLEN_list, nbands, FMIN, FMAX, w_array, h_array, filter_type, filter_order, filter_ripple):
-##################################################################################
 	'''
 	Plots the processing parameters for narrow band least squares processing
 	Args:
@@ -113,16 +106,15 @@ def processing_parameters_plot(rij, freqlist, WINLEN_list, nbands, FMIN, FMAX, w
 	ax2.text(0.98, 0.95, 'Filter Order = ' + str(filter_order), transform=ax2.transAxes, horizontalalignment='right', fontsize=fonts-2)
 	if filter_type == 'cheby1':
 	    ax2.text(0.5, 0.95, 'Ripple = ' + str(filter_ripple), transform=ax2.transAxes, horizontalalignment='center', fontsize=fonts-2)
-
+	plt.tight_layout()
 	return fig
 
 
 
 
 
-##################################################################################
+
 def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm_array, t_array, num_compute_list, mdccm_thresh):
-##################################################################################
 	'''
 	Plots the results for narrow band least squares processing
 	Args:
@@ -310,6 +302,7 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 	ax5.set_ylim(0.25,0.45)
 	ax5.set_xlim(t_float[0],t_float[-1])
 
+	plt.tight_layout()
 	return fig
 
 

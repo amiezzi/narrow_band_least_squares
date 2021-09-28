@@ -15,13 +15,10 @@
 from waveform_collection import gather_waveforms 
 from obspy.core import UTCDateTime, Stream, read
 import numpy as np
-#import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 import math as math
-#from matplotlib import cm
-#from matplotlib import rcParams
-from array_processing.algorithms.helpers import getrij
+from helpers import get_freqlist, get_winlenlist, filter_data, make_float
 from plotting import broad_filter_response_plot, processing_parameters_plot, pmcc_like_plot
+from array_processing.algorithms.helpers import getrij
 from array_processing.tools.plotting import array_plot
 from lts_array import ltsva
 from scipy import signal 
@@ -70,9 +67,8 @@ latlist = [-1.74812, -1.74749, -1.74906, -1.74805]
 lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
 calib = -0.000113  # Pa/count
 
-#data_dir = '/Users/snehabhetanabhotla/Desktop/Research/data/'                                      # directory where data is located
 data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
-#data_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'          # directory where data is located
+
 '''
 
 ### Filtering ###
@@ -88,22 +84,19 @@ filter_ripple = 0.01
 ### Window Length ###
 WINOVER = 0.5               # window overlap
 window_length = 'adaptive'  # 'constant' or 'adaptive'
-WINLEN = 50                 # window length [s]; used if window_length = 'constant' AND if window_length = '1/f' (because of broadband processing)
-WINLEN_1 = 60              # window length for band 1 (lowest frequency) [s]; only used if window_length = '1/f'
-WINLEN_X = 30               # window length for band X (highest frequency) [s]; only used if window_length = '1/f'
+WINLEN = 50                 # window length [s]; used if window_length = 'constant' AND if window_length = 'adaptive' (because of broadband processing)
+WINLEN_1 = 60              # window length for band 1 (lowest frequency) [s]; only used if window_length = 'adaptive'
+WINLEN_X = 30               # window length for band X (highest frequency) [s]; only used if window_length = 'adaptive'
 
 ### Array processing ###
 ALPHA = 1.0                 # Use ordinary least squares processing (not trimmed least squares)
 mdccm_thresh = 0.6          # Threshold value of MdCCM for plotting; Must be between 0 and 1
 
 ### Figure Save Options ###
-#save_dir = '/Users/snehabhetanabhotla/Desktop/Research/Plots/LeastSquaresCode/LeastSquaresButPMCC/'			     # directory in which to save figures
 save_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'         # directory in which to save figures
-#save_dir = '/Users/ACGL/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'            # directory in which to save figures
 file_type = '.png'                          # file save type
 dpi_num = 300                               # dots per inch for plot save
-#fonts = 14                                  # default font size for plotting
-#rcParams.update({'font.size': fonts})
+
 
 
 
@@ -134,94 +127,38 @@ elif SOURCE == 'local':
 
 
 
-#Default plot to sanity check 
-#can also do print(st)
-#st.plot() 
-
-
-
 ##################################################################################
 #####################################
 ### Set Up Narrow Frequency Bands ###
 #####################################										
-
-freqrange = FMAX - FMIN
-
-if freq_band_type == 'linear':
-    freqinterval = freqrange / nbands
-    freqlist = np.arange(FMIN, FMAX+freqinterval, freqinterval)
-elif freq_band_type == 'log':
-    FMINL = math.log(FMIN, 10)
-    FMAXL = math.log(FMAX, 10)
-    freqlist = np.logspace(FMINL, FMAXL, num = nbands+1)
+freqlist = get_freqlist(FMIN, FMAX, freq_band_type, nbands)
 
 
 ##################################################################################
 #############################
 ### Set Up Window Lengths ###
 ############################# 
-                                  
-if window_length == 'constant':
-    WINLEN_list = [] 
-    for ii in range(nbands):
-        WINLEN_list.append(WINLEN)
-elif window_length == 'adaptive':
-    # varies linearly with period
-    WINLEN_list = np.linspace(WINLEN_1, WINLEN_X, num=nbands)
-    WINLEN_list = [int(item) for item in WINLEN_list]
-print(WINLEN_list)
+WINLEN_list = get_winlenlist(window_length, nbands, WINLEN, WINLEN_1, WINLEN_X)
 
-'''
-### Plot ###
-height = []
-for ii in range(nbands):
-    height.append(freqlist[ii+1]- freqlist[ii])
-'''
 
 ##################################################################################
 ######################
 ### Array Geometry ###
 ######################
-
 # Convert array coordinates to array processing geometry
 rij = getrij(latlist, lonlist)
-
 
 
 ##################################################################################
 ##################################
 ### Broadband Array Processing ###
 ##################################
-stf_broad = st.copy()
-Fs = stf_broad[0].stats.sampling_rate
-if filter_type == 'butter': 
-    stf_broad.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=filter_order, zerophase = True)
-    sos = signal.iirfilter(filter_order, [FMIN, FMAX], btype='band',ftype='butter', fs=Fs, output='sos')    
-elif filter_type == 'cheby1': 
-    #Wn = [FMIN/(Fs/2), FMAX/(Fs/2)]
-    Wn = [FMIN, FMAX]
-    #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
-    #sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
-    sos = signal.iirfilter(filter_order, [FMIN, FMAX], rp=filter_ripple, btype='band', analog=False, ftype='cheby1', fs=Fs,output='sos')
-    for ii in range(len(st)):
-        # put signal in numpy array
-        temp_array = stf_broad[ii].data
-        # Filter
-        filtered = signal.sosfilt(sos, temp_array)
-        #filtered =signal.filtfilt(b,a,temp_array)
-        # transform signal back to st
-        stf_broad[ii].data = filtered
 
-stf_broad.taper(max_percentage=0.01)    # Taper the waveforms
-
-# Broadband array processing
+stf_broad, Fs, sos = filter_data(st, filter_type, FMIN, FMAX, filter_order, filter_ripple)
 vel, baz, t, mdccm, stdict, sig_tau = ltsva(stf_broad, rij, WINLEN, WINOVER, ALPHA)
 
-
+# Plot broadband array processing results
 fig1, axs1 = array_plot(stf_broad, t, mdccm, vel, baz, ccmplot=True, mcthresh=mdccm_thresh, sigma_tau=sig_tau)
-
-
-### Save figure ###
 fig1.savefig(save_dir + 'LeastSquares', dpi=dpi_num)
 plt.close(fig1)
 
@@ -234,9 +171,9 @@ FMAXL = math.log(Fs/2, 10)
 freq_resp_list = np.logspace(FMINL, FMAXL, num = 1000)
 w_broad, h_broad = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
 
-fig = broad_filter_response_plot(w_broad, h_broad, FMIN, FMAX, filter_type, filter_order, filter_ripple)
 
-plt.tight_layout()
+fig = broad_filter_response_plot(w_broad, h_broad, FMIN, FMAX, filter_type, filter_order, filter_ripple)
+#plt.tight_layout()
 fig.savefig(save_dir + 'Filter_Frequency_Response_Broadband', dpi=dpi_num)
 plt.close(fig)
 
@@ -247,13 +184,12 @@ plt.close(fig)
 ### Initialize Numpy Arrays ###
 ###############################
 if window_length == 'constant':
-    sampinc=int((1-WINOVER)*WINLEN)
+    sampinc = int((1-WINOVER)*WINLEN)
 elif window_length == 'adaptive':
-    sampinc=int((1-WINOVER)*WINLEN_X)
-npts=len(st[0].data)
-its=np.arange(0,npts,sampinc)
-nits=len(its)-1
-Fs = stf_broad[0].stats.sampling_rate
+    sampinc = int((1-WINOVER)*WINLEN_X)
+npts = len(st[0].data)
+its = np.arange(0,npts,sampinc)
+nits = len(its)-1
 vector_len = int(nits/Fs)
 
 # Initialize arrays to be as large as the number of windows for the highest frequency band
@@ -263,8 +199,8 @@ mdccm_array = np.empty((nbands,vector_len))
 t_array = np.empty((nbands,vector_len))
 
 # Initialize Frequency response arrays
-w_array = np.empty((nbands,len(w_broad)),dtype = 'complex_')
-h_array = np.empty((nbands,len(h_broad)),dtype = 'complex_')
+w_array = np.empty((nbands,len(w_broad)), dtype = 'complex_')
+h_array = np.empty((nbands,len(h_broad)), dtype = 'complex_')
 
 
 # Parallel Processing
@@ -277,60 +213,24 @@ print(num_cores)
 ########################################
 num_compute_list = []
 for ii in range(nbands): 
-    tempst_filter = st.copy()
-    Fs = tempst_filter[0].stats.sampling_rate
     tempfmin = freqlist[ii]
     tempfmax = freqlist[ii+1]
-    if filter_type == 'butter': 
-        tempst_filter.filter('bandpass', freqmin = tempfmin, freqmax = tempfmax, corners=filter_order, zerophase = True)
-        sos = signal.iirfilter(filter_order, [tempfmin, tempfmax], btype='band',ftype='butter', fs=Fs, output='sos')    
-    elif filter_type == 'cheby1': 
-        #Wn = [tempfmin/(Fs/2), tempfmax/(Fs/2)]
-        Wn = [tempfmin, tempfmax]
-        #b,a = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs)
-        #sos = signal.cheby1(order, ripple, Wn, 'bandpass', fs=Fs, output='sos')
-        sos = signal.iirfilter(filter_order, Wn, rp=filter_ripple, btype='band', analog=False, ftype='cheby1', fs=Fs,output='sos')
-        for jj in range(len(st)):
-            # put signal in numpy array
-            temp_array = tempst_filter[jj].data
-            # Filter
-            filtered = signal.sosfilt(sos, temp_array)
-            #filtered =signal.filtfilt(b,a,temp_array)
-            # transform signal back to st
-            tempst_filter[jj].data = filtered
+
+    tempst_filter, Fs, sos = filter_data(st, filter_type, tempfmin, tempfmax, filter_order, filter_ripple)
     w, h = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
     w_array[ii,:] = w
     h_array[ii,:] = h
 
 
-
-    tempst_filter.taper(max_percentage=0.01)    # Taper the waveforms
-    #filteredst.append(tempst_filter)
-    #filteredst[ii][:]=tempst_filter
-
     # Run Array Processing 
     vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN_list[ii], WINOVER, ALPHA)
 
     # Convert array processing output to numpy array of floats
-    vel_float = []
-    for jj in range(len(vel)):
-        vel_float.append(float(vel[jj]))
-    vel_float = np.array(vel_float)
+    vel_float = make_float(vel)
+    baz_float = make_float(baz)
+    mdccm_float = make_float(mdccm)
+    t_float = make_float(t)
 
-    baz_float = []
-    for jj in range(len(baz)):
-        baz_float.append(float(baz[jj]))
-    baz_float = np.array(baz_float)
-
-    mdccm_float = []
-    for jj in range(len(mdccm)):
-        mdccm_float.append(float(mdccm[jj]))
-    mdccm_float = np.array(mdccm_float)
-
-    t_float = []
-    for jj in range(len(t)):
-        t_float.append(float(t[jj]))
-    t_float = np.array(t_float)
 
     ####################################
     ### Save Array Processing Output ###
@@ -341,34 +241,25 @@ for ii in range(nbands):
     t_array[ii,:len(t_float)] = t_float
     num_compute_list.append(len(vel_float))
 
-print(vel_array.shape)
-print(num_compute_list)
-
 
 
 
 
 ##################################################################################
-##################################
-### Processing Parameters Plot ###
-##################################
+###################################
+### Plot: Processing Parameters ###
+###################################
 fig = processing_parameters_plot(rij, freqlist, WINLEN_list, nbands, FMIN, FMAX, w_array, h_array, filter_type, filter_order, filter_ripple)
-
-plt.tight_layout()
 fig.savefig(save_dir + 'Processing_Parameters', dpi=dpi_num)
 plt.close(fig)
 
 
 
-
-
 ##################################################################################
-######################
-### PMCC-like plot ###
-######################
+#######################
+### Plot: PMCC-like ###
+#######################
 fig = pmcc_like_plot(FMIN, FMAX, stf_broad, nbands, freqlist, vel_array, baz_array, mdccm_array, t_array, num_compute_list, mdccm_thresh)
-
-plt.tight_layout()
 fig.savefig(save_dir + 'LeastSquaresButPMCC', dpi=dpi_num)
 plt.close(fig)
 
