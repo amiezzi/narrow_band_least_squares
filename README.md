@@ -20,7 +20,7 @@ To use the code, you will need to activate the conda environment from [uafgeotoo
 
 Run an example script by 
 ```
->> python XXX
+>> python example.py
 ```
 
 ## Associated Publications
