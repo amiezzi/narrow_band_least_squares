@@ -10,7 +10,7 @@ In Terminal, navigate to the directory you wish to install then download the rep
 ```
 >> git clone https://github.com/amiezzi/narrow_band_least_squares.git
 ```
-This will create a folder named narrow_band_least_squares. 
+This will create a folder named `narrow_band_least_squares`. 
 
 ## Usage
 To use the code, you will need to activate the conda environment from [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing) by 
@@ -20,7 +20,7 @@ To use the code, you will need to activate the conda environment from [uafgeotoo
 
 Run an example script by 
 ```
->> python XXX
+>> python example.py
 ```
 
 ## Associated Publications
