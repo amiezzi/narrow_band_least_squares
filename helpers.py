@@ -23,7 +23,7 @@ def get_freqlist(FMIN, FMAX, freq_band_type, nbands):
 	elif freq_band_type == 'log':
 		FMINL = math.log(FMIN, 10)
 		FMAXL = math.log(FMAX, 10)
-	freqlist = np.logspace(FMINL, FMAXL, num = nbands+1)
+		freqlist = np.logspace(FMINL, FMAXL, num = nbands+1)
 
 	return freqlist
 
@@ -106,4 +106,28 @@ def make_float(input):
 	float_array = np.array(float_list)
 
 	return float_array
+
+
+def write_txtfile(save_dir, vel_array, baz_array, mdccm_array, t_array, freqlist, num_compute_list):
+	'''
+	Write array processing results to txt file
+	Args:
+		save_dir: directory in which to save output file
+		vel_array: numpy array with trace velocity results 
+		baz_array: numpy array with backazimuth results 
+		mdccm_array: numpy array with mdccm results 
+		t_array: numpy array with times for array processing results 
+		freqlist: list of narrow frequency band limits
+		num_compute_list: length for processing reults in each frequency band
+	Returns:
+		None
+	'''
+	f = open(save_dir + 'narrow_band_processing_results.txt', 'w')
+	f.write('Fmin \t Fmax \t Time \t Trace_vel \t Backaz \t MdCCM \n')
+	for ii in range(len(freqlist)-1):
+		print((num_compute_list[ii]))
+		for jj in range(num_compute_list[ii]):
+			f.write(str(freqlist[ii]) + '\t' + str(freqlist[ii+1]) + '\t' + str(t_array[ii,jj]) + '\t' + str(vel_array[ii,jj]) + '\t' + str(baz_array[ii,jj]) + '\t' + str(mdccm_array[ii,jj]) + '\n')
+	f.close()
+
 

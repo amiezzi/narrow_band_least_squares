@@ -19,7 +19,7 @@ import math as math
 from scipy import signal 
 import matplotlib.pyplot as plt
 from narrow_band_least_squares import narrow_band_least_squares
-from helpers import get_freqlist, get_winlenlist, filter_data
+from helpers import get_freqlist, get_winlenlist, filter_data, write_txtfile
 from plotting import broad_filter_response_plot, processing_parameters_plot, pmcc_like_plot
 from array_processing.algorithms.helpers import getrij
 from array_processing.tools.plotting import array_plot
@@ -33,9 +33,9 @@ from lts_array import ltsva
 
 ### Data information ###
 # Data collection
-SOURCE = 'IRIS'                                     # Data source; 'IRIS' or 'local'
+SOURCE = 'local'                                     # Data source; 'IRIS' or 'local'
 
-
+'''
 # IRIS Example
 NETWORK = 'IM'
 STATION = 'I53H?'
@@ -43,11 +43,11 @@ LOCATION = '*'
 CHANNEL = 'BDF'
 START = UTCDateTime('2018-12-19T01:45:00')
 END = START + 20*60
+'''
 
 
 
 '''
-
 # Bogoslof IRIS Example
 NETWORK = 'AV'
 STATION = 'DLL*'
@@ -58,22 +58,40 @@ END = START + 60*60
 '''
 
 '''
+# KENI IRIS Example
+NETWORK = 'AV'
+STATION = 'KENI'
+LOCATION = '*'
+CHANNEL = 'HD*'
+START = UTCDateTime('2021-09-30T07:55:00')
+END = START + 10*60
+'''
+
 # RIOE Local Example
 START = UTCDateTime('2010-05-28T13:30:00')          # start time for processing (UTCDateTime)
-END = UTCDateTime('2010-05-28T18:30:00')            # end time for processing (UTCDateTime)
+#END = UTCDateTime('2010-05-28T18:30:00')            # end time for processing (UTCDateTime)
+END = UTCDateTime('2010-05-28T14:30:00')            # end time for processing (UTCDateTime)
 latlist = [-1.74812, -1.74749, -1.74906, -1.74805]
 lonlist = [-78.62735, -78.62708, -78.62742, -78.62820]
 calib = -0.000113  # Pa/count
 data_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/PMCC_Training/data/'       # directory where data is located
 
 '''
+# Iceland Local Example
+START = UTCDateTime('2021-04-23T08:00:00')          # start time for processing (UTCDateTime)
+END = UTCDateTime('2021-04-23T09:00:00')            # end time for processing (UTCDateTime)
+latlist = [63.89614, 63.89676, 63.89631, 63.89639]
+lonlist = [-22.27762, -22.27785, -22.27881, -22.27809]
+calib = 1  # Pa/count
+data_dir = '/Volumes/Seagate_HD/Iceland_Research_2021/fagradsfjall_data/data/MSEED/'       # directory where data is located
+'''
 
 ### Filtering ###
-FMIN = 0.07                  # [Hz]
-FMAX = 5.                   # [Hz] #should not exceed Nyquist
+FMIN = 0.1                  # [Hz]
+FMAX = 10.                   # [Hz] #should not exceed Nyquist
 nbands = 10                # number of frequency bands 
 freq_band_type = 'log'   # indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
-filter_type = 'cheby1'      # filter type; 'butter', 'cheby1'
+filter_type = 'butter'      # filter type; 'butter', 'cheby1'
 filter_order = 2
 filter_ripple = 0.01
 
@@ -116,6 +134,11 @@ elif SOURCE == 'local':
     # Read in waveforms 
     st = Stream()
     st += read(data_dir + '*.mseed')
+    #day = '113'
+    #st += read(data_dir + 'GL.GL1..HDF.2021.' + day + '.00')
+    #st += read(data_dir + 'GL.GL2..HDF.2021.' + day + '.00')
+    #st += read(data_dir + 'GL.GL3..HDF.2021.' + day + '.00')
+    #st += read(data_dir + 'GL.GL4..HDF.2021.' + day + '.00')
     st.trim(START, END)
     # Calibrate the data 
     for ii in range (len(st)):
@@ -180,8 +203,12 @@ plt.close(fig)
 
 
 ### Plot processing parameters ###
-fig = processing_parameters_plot(rij, freqlist, WINLEN_list, nbands, FMIN, FMAX, w_array, h_array, filter_type, filter_order, filter_ripple)
+fig = processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nbands, FMIN, FMAX, w_array, h_array, filter_type, filter_order, filter_ripple)
 fig.savefig(save_dir + 'Processing_Parameters', dpi=dpi_num)
 plt.close(fig)
+
+
+### Write TXT File ###
+write_txtfile(save_dir, vel_array, baz_array, mdccm_array, t_array, freqlist, num_compute_list)
 
 

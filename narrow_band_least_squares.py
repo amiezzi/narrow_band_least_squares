@@ -6,8 +6,6 @@ from scipy import signal
 from lts_array import ltsva 
 
 
-
-
 def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h, freqlist, freq_resp_list, filter_type, filter_order, filter_ripple):
 	'''
 	Runs narrow band least squares processing
@@ -32,8 +30,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h
 		t_array: numpy array with times for array processing results 
 		num_compute_list: length for processing reults in each frequency band
 		w_array: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
-		h_array: The frequency response, as complex numbers. [ndarray]
-		
+		h_array: The frequency response, as complex numbers. [ndarray]	
 	'''
 	###############################
 	### Initialize Numpy Arrays ###

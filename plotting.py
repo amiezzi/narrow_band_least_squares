@@ -46,11 +46,12 @@ def broad_filter_response_plot(w, h, FMIN, FMAX, filter_type, filter_order, filt
 
 
 
-def processing_parameters_plot(rij, freqlist, WINLEN_list, nbands, FMIN, FMAX, w_array, h_array, filter_type, filter_order, filter_ripple):
+def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nbands, FMIN, FMAX, w_array, h_array, filter_type, filter_order, filter_ripple):
 	'''
 	Plots the processing parameters for narrow band least squares processing
 	Args:
 		rij: Coordinates of sensors as eastings & northings in a ``(2, N)`` array [km]
+		freq_band_type: indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
 		freqlist: List of frequency bounds for narrow band processing
 		WINLEN_list: list of window lengths for each narrow frequency band
 		nbands: number of frequency bands [integer]
@@ -82,13 +83,22 @@ def processing_parameters_plot(rij, freqlist, WINLEN_list, nbands, FMIN, FMAX, w
 
 	ax1 = plt.subplot(gs[0,1]) 
 	ax1.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k')
+	
+	if freq_band_type == 'log':
+		plt.yscale('log')
+		if FMAX < 10:
+			ax1.set_ylim(-0.1,FMAX+2)
+		elif FMAX >=10:
+			ax1.set_ylim(-0.1,FMAX+10)
+	elif freq_band_type == 'linear':
+		ax1.set_ylim(-0.1,FMAX+1)
 	#ax0.scatter(freqlist[:-1], WINLEN_list)
 	ax1.set_xlabel('Window Length [s]',fontsize=fonts+2, fontweight='bold')
 	ax1.set_ylabel('Frequency [Hz]',fontsize=fonts+2, fontweight='bold')
 	ax1.set_title('b) Window Length', loc='left', fontsize=fonts+2, fontweight='bold')
 	ax1.text(0.02, 0.95, '# of Bands = ' + str(nbands), transform=ax1.transAxes, horizontalalignment='left', fontsize=fonts-2)
 	ax1.text(0.98, 0.95, 'FMIN = ' + str(FMIN) + ', FMAX = ' + str(FMAX), transform=ax1.transAxes, horizontalalignment='right', fontsize=fonts-2)
-	ax1.set_ylim(-0.1,FMAX+1)
+	
 
 	ax2 = plt.subplot(gs[1,0:2]) 
 	for ii in range(nbands):
