@@ -4,6 +4,10 @@ Uses the open source [uafgeotools/array_processing](https://github.com/uafgeotoo
 ## Dependencies
 - Follow the instructions to install [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing), which will create the new conda environment `uafinfra`. 
 - [Obspy](https://docs.obspy.org/) is included in this environment
+- If you would like to use the parallelized version, you must also install [joblib](https://joblib.readthedocs.io/en/latest/) in the `uafinfra` conda environment. For example, using conda:
+```
+>> conda install -c anaconda joblib
+```
 
 ## Installation
 In Terminal, navigate to the directory you wish to install then download the repository by running the following:
