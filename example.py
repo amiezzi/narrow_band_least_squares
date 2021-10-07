@@ -18,7 +18,7 @@ import numpy as np
 import math as math
 from scipy import signal 
 import matplotlib.pyplot as plt
-from narrow_band_least_squares import narrow_band_least_squares
+from narrow_band_least_squares import narrow_band_least_squares, narrow_band_least_squares_parallel
 from helpers import get_freqlist, get_winlenlist, filter_data, write_txtfile
 from plotting import broad_filter_response_plot, processing_parameters_plot, pmcc_like_plot
 from array_processing.algorithms.helpers import getrij
@@ -162,7 +162,7 @@ stf_broad, Fs, sos = filter_data(st, filter_type, FMIN, FMAX, filter_order, filt
 vel, baz, t, mdccm, stdict, sig_tau = ltsva(stf_broad, rij, WINLEN, WINOVER, ALPHA)
 
 
-### Plot standard  array processing results ###
+### Plot standard array processing results ###
 fig1, axs1 = array_plot(stf_broad, t, mdccm, vel, baz, ccmplot=True, mcthresh=mdccm_thresh, sigma_tau=sig_tau)
 fig1.savefig(save_dir + 'LeastSquares', dpi=dpi_num)
 plt.close(fig1)
@@ -193,7 +193,11 @@ freqlist = get_freqlist(FMIN, FMAX, freq_band_type, nbands)
 WINLEN_list = get_winlenlist(window_length, nbands, WINLEN, WINLEN_1, WINLEN_X)
 
 ### Run Narrow Band Least Squares ###
-vel_array, baz_array, mdccm_array, t_array, num_compute_list, w_array, h_array = narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w_broad, h_broad, freqlist, freq_resp_list, filter_type, filter_order, filter_ripple)
+
+#vel_array, baz_array, mdccm_array, t_array, num_compute_list, w_array, h_array = narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w_broad, h_broad, freqlist, freq_resp_list, filter_type, filter_order, filter_ripple)
+vel_array, baz_array, mdccm_array, t_array, num_compute_list, w_array, h_array = narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w_broad, h_broad, freqlist, freq_resp_list, filter_type, filter_order, filter_ripple)
+
+
 
 
 ### Plot narrow band least squares array processing results ###
