@@ -20,12 +20,58 @@ def get_freqlist(FMIN, FMAX, freq_band_type, nbands):
 	if freq_band_type == 'linear':
 		freqinterval = freqrange / nbands
 		freqlist = np.arange(FMIN, FMAX+freqinterval, freqinterval)
+		nbands_calc = nbands
+		FMAX_calc = FMAX
+
 	elif freq_band_type == 'log':
 		FMINL = math.log(FMIN, 10)
 		FMAXL = math.log(FMAX, 10)
 		freqlist = np.logspace(FMINL, FMAXL, num = nbands+1)
+		nbands_calc = nbands
+		FMAX_calc = FMAX
 
-	return freqlist
+	elif freq_band_type == 'octave':
+		# octave width; upper frequency (f2) is twice the lower frequency (f1)
+		freqlist=[FMIN,]
+		#for ii in range(nbands):
+		#	if freqlist[ii]<=FMAX:
+		#		freqlist.append(2*freqlist[ii])
+		while 2*freqlist[-1]<=FMAX:
+			freqlist.append(2*freqlist[-1])
+		# double check nbands
+		nbands_calc = int(len(freqlist)) -1
+		FMAX_calc = freqlist[-1]
+
+	elif freq_band_type == '2_octave_over':
+		# e.g. used in Green and Bowers (2010), JGR
+		# two-octave bands that overlap by 1 octave
+		# upper frequency (f2) is 4 times the lower frequency (f1)
+		#freqlist = [FMIN,4*FMIN]
+		freqlist = [FMIN,]
+		#for ii in range(nbands):
+		#	if freqlist[ii]<=FMAX:
+		#		freqlist.append(2*freqlist[ii])
+		while 2*freqlist[-1]<=FMAX:
+			freqlist.append(2*freqlist[-1])
+			#freqlist.append(4*freqlist[-1])
+		# double check nbands
+		#nbands_calc = int(len(freqlist)/2) 
+		nbands_calc = int(len(freqlist)) -2
+		FMAX_calc = freqlist[-1]
+
+	elif freq_band_type == 'onethird_octave':
+		# e.g. Garces (2013), Inframatics
+		# a one third octave is when the upper band edge (f2) is the lower band edge (f1) times the cubed root of 2
+		freqlist=[FMIN,]
+		while freqlist[-1]* (2** (1./3.)) <=FMAX:
+			freqlist.append(freqlist[-1]* (2** (1./3.)))
+		# double check nbands
+		nbands_calc = int(len(freqlist)) -1
+		FMAX_calc = freqlist[-1]
+
+
+
+	return freqlist, nbands_calc, FMAX_calc
 
 
 
@@ -131,3 +177,53 @@ def write_txtfile(save_dir, vel_array, baz_array, mdccm_array, t_array, freqlist
 	f.close()
 
 
+def read_txtfile(save_dir):
+	'''
+	Write array processing results to txt file
+	Args:
+		save_dir: directory in which to save output file
+	Returns:
+		vel_array: numpy array with trace velocity results 
+		baz_array: numpy array with backazimuth results 
+		mdccm_array: numpy array with mdccm results 
+		t_array: numpy array with times for array processing results 
+		freqlist: list of narrow frequency band limits
+		num_compute_list: length for processing reults in each frequency band
+	'''
+	temp_file = np.genfromtxt(save_dir + 'narrow_band_processing_results.txt', skip_header=1, dtype='float')
+
+	# Create freqlist
+	fmin_list = temp_file[:,0]
+	fmax_temp = temp_file[-1,1]
+	unique_freq, idx = np.unique(fmin_list, return_index=True)
+	freqlist = np.append(unique_freq, fmax_temp)
+	idx = np.append(idx,len(fmin_list))
+	num_compute_list = np.diff(idx)
+	FMIN = fmin_list[0]
+	FMAX = fmax_temp
+
+	# Setup arrays
+	vector_len = len(fmin_list) - idx[-2]
+	nbands = len(freqlist)-1
+	vel_array = np.empty((nbands,vector_len))
+	baz_array = np.empty((nbands,vector_len))
+	mdccm_array = np.empty((nbands,vector_len))
+	t_array = np.empty((nbands,vector_len))
+
+	# Fill in the arrays
+	t_list = temp_file[:,2]
+	vel_list = temp_file[:,3]
+	baz_list = temp_file[:,4]
+	mdccm_list = temp_file[:,5]
+
+
+	for ii in range(nbands):
+		temp_start_idx = idx[ii]
+		temp_end_idx = idx[ii+1]
+		temp_len = temp_end_idx - temp_start_idx
+		vel_array[ii,:temp_len] = vel_list[temp_start_idx:temp_end_idx]
+		baz_array[ii,:temp_len] = baz_list[temp_start_idx:temp_end_idx]
+		mdccm_array[ii,:temp_len] = mdccm_list[temp_start_idx:temp_end_idx]
+		t_array[ii,:temp_len] = t_list[temp_start_idx:temp_end_idx]
+
+	return vel_array, baz_array, mdccm_array, t_array, freqlist, num_compute_list, nbands, FMIN, FMAX

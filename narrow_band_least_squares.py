@@ -7,7 +7,7 @@ import multiprocessing
 from joblib import Parallel, delayed
 
 
-def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h, freqlist, freq_resp_list, filter_type, filter_order, filter_ripple):
+def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h, freqlist, freq_band_type, freq_resp_list, filter_type, filter_order, filter_ripple):
 	'''
 	Runs narrow band least squares processing
 	Args:
@@ -20,6 +20,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h
 		w: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
 		h: The frequency response, as complex numbers. [ndarray]
 		freqlist: list of narrow frequency band limits
+		freq_band_type: `linear' or 'log' for frequency band width [string]
 		freq_resp_list: list for computing filter frequency response
 		filter_type: filter type [string]
 		filter_order: filter order [integer]
@@ -60,9 +61,16 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h
 	########################################
 	num_compute_list = []
 	#num_compute_list = np.zeros((nbands))
+
 	for ii in range(nbands): 
-		tempfmin = freqlist[ii]
-		tempfmax = freqlist[ii+1]
+		# Check if overlapping bands
+		if freq_band_type == '2_octave_over':
+			tempfmin = freqlist[ii]
+			tempfmax = freqlist[ii+2]
+		# All others
+		else:
+			tempfmin = freqlist[ii]
+			tempfmax = freqlist[ii+1]
 
 		tempst_filter, Fs, sos = filter_data(st, filter_type, tempfmin, tempfmax, filter_order, filter_ripple)
 		w, h = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
@@ -97,12 +105,13 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h
 
 
 
-def narrow_band_loop(ii, freqlist, freq_resp_list, st, filter_type, filter_order, filter_ripple, rij, WINLEN_list, WINOVER, ALPHA, vector_len):
+def narrow_band_loop(ii, freqlist, freq_band_type, freq_resp_list, st, filter_type, filter_order, filter_ripple, rij, WINLEN_list, WINOVER, ALPHA, vector_len):
 	'''
 	Loop designed for narrow band least squares processing parallelization
 	Args:
 		ii: index for narrow frequency band to be used
 		freqlist: list of narrow frequency band limits
+		freq_band_type; `linear' or 'log' for frequency band width [string]
 		freq_resp_list: list for computing filter frequency response
 		st: array data (:class:`~obspy.core.stream.Stream`)
 		filter_type: filter type [string]
@@ -122,8 +131,13 @@ def narrow_band_loop(ii, freqlist, freq_resp_list, st, filter_type, filter_order
 		w_temp: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
 		h_temp: The frequency response, as complex numbers. [ndarray]	
 	'''
-	tempfmin = freqlist[ii]
-	tempfmax = freqlist[ii+1]
+	if freq_band_type == '2_octave_over':
+		tempfmin = freqlist[ii]
+		tempfmax = freqlist[ii+2]
+	# All others
+	else:
+		tempfmin = freqlist[ii]
+		tempfmax = freqlist[ii+1]
 
 	tempst_filter, Fs, sos = filter_data(st, filter_type, tempfmin, tempfmax, filter_order, filter_ripple)
 	w_temp, h_temp = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
@@ -153,7 +167,7 @@ def narrow_band_loop(ii, freqlist, freq_resp_list, st, filter_type, filter_order
 
 
 
-def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h, freqlist, freq_resp_list, filter_type, filter_order, filter_ripple):
+def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h, freqlist, freq_band_type, freq_resp_list, filter_type, filter_order, filter_ripple):
 	'''
 	Runs narrow band least squares processing
 	Args:
@@ -166,6 +180,7 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nba
 		w: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
 		h: The frequency response, as complex numbers. [ndarray]
 		freqlist: list of narrow frequency band limits
+		freq_band_type: `linear' or 'log' for frequency band width [string]
 		freq_resp_list: list for computing filter frequency response
 		filter_type: filter type [string]
 		filter_order: filter order [integer]
@@ -212,7 +227,7 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nba
 	# Parallel Processing
 	#num_cores = int(multiprocessing.cpu_count()/2)
 	#print(num_cores)
-	results = Parallel(n_jobs=-1)(delayed(narrow_band_loop)(ii, freqlist, freq_resp_list, st, filter_type, filter_order, filter_ripple, rij, WINLEN_list, WINOVER, ALPHA, vector_len) for ii in range(nbands))
+	results = Parallel(n_jobs=-1)(delayed(narrow_band_loop)(ii, freqlist, freq_band_type, freq_resp_list, st, filter_type, filter_order, filter_ripple, rij, WINLEN_list, WINOVER, ALPHA, vector_len) for ii in range(nbands))
 
 
 	###################################################################

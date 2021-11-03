@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+#import matplotlib.dates as mdates
 from matplotlib import rcParams
 import pylab as pl
 from matplotlib.patches import Rectangle
@@ -67,7 +68,10 @@ def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nband
 	'''
 	height = []
 	for ii in range(nbands):
-		height.append(freqlist[ii+1]- freqlist[ii])
+		if freq_band_type == '2_octave_over':
+			height.append(freqlist[ii+2]- freqlist[ii])
+		else:	
+			height.append(freqlist[ii+1]- freqlist[ii])
 
 	fig = plt.figure(figsize=(10,10), dpi=dpi_num)
 	gs = gridspec.GridSpec(2,2)
@@ -82,16 +86,23 @@ def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nband
 	ax0.set_title('a) Array Geometry', loc='left', fontsize=fonts+2, fontweight='bold')
 
 	ax1 = plt.subplot(gs[0,1]) 
-	ax1.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k')
+	if freq_band_type == '2_octave_over':
+		ax1.barh(freqlist[:-2], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k', alpha=0.25)
+	else:
+		ax1.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k')
 	
-	if freq_band_type == 'log':
+	if freq_band_type == 'linear':
+		ax1.set_ylim(-0.1,FMAX+1)
+
+	#if freq_band_type == 'log' or freq_band_type == '2_octave_over':
+	else:
 		plt.yscale('log')
 		if FMAX < 10:
 			ax1.set_ylim(-0.1,FMAX+2)
 		elif FMAX >=10:
 			ax1.set_ylim(-0.1,FMAX+10)
-	elif freq_band_type == 'linear':
-		ax1.set_ylim(-0.1,FMAX+1)
+
+
 	#ax0.scatter(freqlist[:-1], WINLEN_list)
 	ax1.set_xlabel('Window Length [s]',fontsize=fonts+2, fontweight='bold')
 	ax1.set_ylabel('Frequency [Hz]',fontsize=fonts+2, fontweight='bold')
@@ -124,7 +135,7 @@ def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nband
 
 
 
-def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm_array, t_array, num_compute_list, mdccm_thresh):
+def narrow_band_plot(FMIN, FMAX, st, nbands, freqlist, freq_band_type, vel_array, baz_array, mdccm_array, t_array, num_compute_list, mdccm_thresh):
 	'''
 	Plots the results for narrow band least squares processing
 	Args:
@@ -144,6 +155,8 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 	'''
 	timevec = st[0].times('matplotlib')	# Time vector for plotting
 	cm = 'jet'
+	#cm_mdccm = 'YlGnBu'
+	cm_mdccm = 'jet'
 	cax = (FMIN, FMAX)
 
 	fig = plt.figure(figsize=(15,20), dpi=dpi_num)
@@ -160,11 +173,15 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 	ax4 = plt.subplot(gs[4,0])  # Scatter Plot
 	ax5 = plt.subplot(gs[5,0])  # Scatter Plot Trace Velocity
 
-	for ii in range(nbands):
-
-	    # Frequency band info
-	    tempfmin = freqlist[ii]
-	    tempfmax = freqlist[ii+1]
+	for ii in range(nbands): 
+	    # Check if overlapping bands
+	    if freq_band_type == '2_octave_over':
+	    	tempfmin = freqlist[ii]
+	    	tempfmax = freqlist[ii+2]
+	    # All others
+	    else:
+		    tempfmin = freqlist[ii]
+		    tempfmax = freqlist[ii+1]
 	    height_temp = tempfmax - tempfmin # height of frequency rectangles
 	    tempfavg = tempfmin + (height_temp/2)        # center point of the frequency interval
 
@@ -183,6 +200,7 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 	    # Initialize colorbars
 	    #normal = pl.Normalize(baz_float.min(), baz_float.max())
 	    normal_baz = pl.Normalize(0, 360)
+	    #normal_baz = pl.Normalize(110, 170)
 	    colors_baz = pl.cm.jet(normal_baz(baz_float))
 
 	    #normal_vel = pl.Normalize(vel_float.min(), vel_float.max()) # This re-normalizing for each narrow frequency band (not right)
@@ -191,6 +209,7 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 
 	    #normal_vel = pl.Normalize(vel_float.min(), vel_float.max()) # This re-normalizing for each narrow frequency band (not right)
 	    normal_mdccm = pl.Normalize(0.,1.0)
+	    #colors_mdccm = pl.cm.BuPu(normal_mdccm(mdccm_float))
 	    colors_mdccm = pl.cm.jet(normal_mdccm(mdccm_float))
 
 
@@ -236,8 +255,9 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 	### Add colorbars ###
 	#####################
 
-	# Add colorbar to trace velocity plot
+	# Add colorbar to mdccm plot
 	cax = plt.subplot(gs[1,1]) 
+	#cb1 = cbar.ColorbarBase(cax, cmap=pl.cm.BuPu,norm=normal_mdccm,orientation='vertical') 
 	cb1 = cbar.ColorbarBase(cax, cmap=pl.cm.jet,norm=normal_mdccm,orientation='vertical') 
 	cax.set_ylabel('MdCCM', fontsize=fonts+2, fontweight='bold')
 
@@ -253,21 +273,25 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 
 	# Add colorbar to scatter plot
 	cbaxes = plt.subplot(gs[4,1]) 
-	hc = plt.colorbar(sc, cax=cbaxes,orientation='vertical') 
+	if 'sc' in locals():
+		hc = plt.colorbar(sc, cax=cbaxes,orientation='vertical') 
 	cbaxes.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
 
 	# Add colorbar to scatter plot for trace velocity
 	cbaxes_vel = plt.subplot(gs[5,1]) 
-	hc_vel = plt.colorbar(sc_vel, cax=cbaxes_vel,orientation='vertical') 
+	if 'sc_vel' in locals():
+		hc_vel = plt.colorbar(sc_vel, cax=cbaxes_vel,orientation='vertical') 
 	cbaxes_vel.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
 
 
 	###################
 	### Format axes ###
 	###################
+	# Find Date
+
 	# Pressure plot 
 	ax0.xaxis_date()
-	ax0.set_xlim(timevec[0], timevec[-1])
+	ax0.set_xlim(timevec[1], timevec[-1])
 	ax0.set_ylabel('Pressure [Pa]', fontsize=fonts+2, fontweight='bold') 
 	ax0.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
 	ax0.set_title('a)', loc='left', fontsize=fonts+2, fontweight='bold')
@@ -302,6 +326,7 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 	ax4.set_title('e)', loc='left', fontsize=fonts+2, fontweight='bold')
 	ax4.xaxis_date()
 	ax4.set_ylim(0,360)
+	#ax4.set_ylim(110,170)
 	ax4.set_xlim(t_float[0],t_float[-1])
 
 	# Scatter Plot
@@ -316,4 +341,96 @@ def pmcc_like_plot(FMIN, FMAX, st, nbands, freqlist, vel_array, baz_array, mdccm
 	return fig
 
 
+
+
+
+
+
+
+
+def baz_freq_plot(FMIN, FMAX, nbands, freqlist, baz_array, mdccm_array, t_array, num_compute_list, mdccm_thresh):
+	'''
+	Plots the backazimuth through time colored by frequency for narrow band least squares processing; good for weeks/months processing
+	Args:
+		FMIN: Minimum frequency [float] [Hz]
+		FMAX: Maximum frequency [float] [Hz]
+		nbands: number of frequency bands [integer]
+		freqlist: List of frequency bounds for narrow band processing
+		baz_array: array of backazimuth processing results
+		mdccm_array: array of MdCCM processing results
+		t_array: array of times for processing results
+		num_compute_list: list of number of windows for each frequency band array processing
+		mdccm_thresh: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
+	Returns:
+		fig: Figure handle (:class:`~matplotlib.figure.Figure`)
+	'''
+	#timevec = st[0].times('matplotlib')	# Time vector for plotting
+	cm = 'jet'
+	cax = (FMIN, FMAX)
+
+	fig = plt.figure(figsize=(15,7), dpi=dpi_num)
+	gs = gridspec.GridSpec(1,2, width_ratios=[3,0.1], height_ratios=[1])
+
+	# Initialize other plots
+	ax1 = plt.subplot(gs[0,0])  # Scatter Plot
+
+
+	for ii in range(nbands):
+
+	    # Frequency band info
+	    tempfmin = freqlist[ii]
+	    tempfmax = freqlist[ii+1]
+	    height_temp = tempfmax - tempfmin # height of frequency rectangles
+	    tempfavg = tempfmin + (height_temp/2)        # center point of the frequency interval
+
+	    # Gather array processing results for this narrow frequency band
+	    baz_temp = baz_array[ii,:]
+	    mdccm_temp = mdccm_array[ii,:]
+	    t_temp = t_array[ii,:]
+
+	    # Trim each vector to ignore NAN and zero values
+	    baz_float = baz_temp[:num_compute_list[ii]]
+	    mdccm_float = mdccm_temp[:num_compute_list[ii]]
+	    t_float = t_temp[:num_compute_list[ii]]
+
+	    # Initialize colorbars
+	    #normal = pl.Normalize(baz_float.min(), baz_float.max())
+	    #normal_baz = pl.Normalize(0, 360)
+	    #colors_baz = pl.cm.jet(normal_baz(baz_float))
+
+
+	    # Loop through each narrow band results vector and plot rectangles/scatter points
+	    for jj in range(len(t_float)-1):
+	        #width_temp = t_float[jj+1] - t_float[jj]
+	        if mdccm_float[jj] >= mdccm_thresh: 
+	            #x_temp = t_float[jj]
+	            #y_temp = tempfmin
+
+	            # Scatter plot
+	            sc = ax1.scatter(t_float[jj], baz_float[jj], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
+	            sc.set_clim(cax)
+
+
+	#####################
+	### Add colorbars ###
+	#####################
+	# Add colorbar to scatter plot
+	cbaxes = plt.subplot(gs[0,1]) 
+	hc = plt.colorbar(sc, cax=cbaxes,orientation='vertical') 
+	cbaxes.set_ylabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
+
+
+	###################
+	### Format axes ###
+	###################
+	# Scatter Plot
+	ax1.set_ylabel('Backazimuth [deg]', fontsize=fonts+2, fontweight='bold')  
+	ax1.set_xlabel('Time', fontsize=fonts+2, fontweight='bold') 
+	ax1.xaxis_date()
+	ax1.set_ylim(0,360)
+	ax1.set_xlim(t_float[0],t_float[-1])
+
+
+	plt.tight_layout()
+	return fig
 
