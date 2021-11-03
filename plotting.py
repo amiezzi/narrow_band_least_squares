@@ -89,12 +89,10 @@ def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nband
 	if freq_band_type == '2_octave_over':
 		ax1.barh(freqlist[:-2], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k', alpha=0.25)
 	else:
-		ax1.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k')
+		ax1.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k', alpha=0.5)
 	
 	if freq_band_type == 'linear':
 		ax1.set_ylim(-0.1,FMAX+1)
-
-	#if freq_band_type == 'log' or freq_band_type == '2_octave_over':
 	else:
 		plt.yscale('log')
 		if FMAX < 10:
