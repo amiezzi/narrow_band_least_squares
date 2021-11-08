@@ -13,7 +13,7 @@ fonts = 14
 rcParams.update({'font.size': fonts})
 
 
-def broad_filter_response_plot(w, h, FMIN, FMAX, filter_type, filter_order, filter_ripple):
+def broad_filter_response_plot(w, h, FMIN, FMAX, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
 	'''
 	Plots the filter frequency response for standard least squares processing
 	Args:
@@ -21,9 +21,9 @@ def broad_filter_response_plot(w, h, FMIN, FMAX, filter_type, filter_order, filt
 		h: The frequency response, as complex numbers. [ndarray]
 		FMIN: Minimum frequency [float] [Hz]
 		FMAX: Maximum frequency [float] [Hz]
-		filter_type: filter type [string]
-		filter_order: filter order [integer]
-		filter_ripple: filter ripple (if Chebyshev I filter) [float]
+		FILTER_TYPE: filter type [string]
+		FILTER_ORDER: filter order [integer]
+		FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
 	Returns:
 		fig: Figure handle (:class:`~matplotlib.figure.Figure`)
 	'''
@@ -38,37 +38,37 @@ def broad_filter_response_plot(w, h, FMIN, FMAX, filter_type, filter_order, filt
 	ax0.set_xlabel('Frequency [Hz]', fontsize=fonts+2, fontweight='bold')
 	#ax0.set_xlim(0,10)
 	ax0.set_ylim(-5,0.1)
-	ax0.text(0.02, 0.05, 'Filter Type = ' + filter_type, transform=ax0.transAxes)
-	ax0.text(0.02, 0.1, 'Filter Order = ' + str(filter_order), transform=ax0.transAxes)
-	if filter_type == 'cheby1':
-	    ax0.text(0.02, 0.15, 'Ripple = ' + str(filter_ripple), transform=ax0.transAxes)
+	ax0.text(0.02, 0.05, 'Filter Type = ' + FILTER_TYPE, transform=ax0.transAxes)
+	ax0.text(0.02, 0.1, 'Filter Order = ' + str(FILTER_ORDER), transform=ax0.transAxes)
+	if FILTER_TYPE == 'cheby1':
+	    ax0.text(0.02, 0.15, 'Ripple = ' + str(FILTER_RIPPLE), transform=ax0.transAxes)
 	plt.tight_layout()
 	return fig
 
 
 
-def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nbands, FMIN, FMAX, w_array, h_array, filter_type, filter_order, filter_ripple):
+def processing_parameters_plot(rij, FREQ_BAND_TYPE, freqlist, WINLEN_list, NBANDS, FMIN, FMAX, w_array, h_array, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
 	'''
 	Plots the processing parameters for narrow band least squares processing
 	Args:
 		rij: Coordinates of sensors as eastings & northings in a ``(2, N)`` array [km]
-		freq_band_type: indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
+		FREQ_BAND_TYPE: indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
 		freqlist: List of frequency bounds for narrow band processing
 		WINLEN_list: list of window lengths for each narrow frequency band
-		nbands: number of frequency bands [integer]
+		NBANDS: number of frequency bands [integer]
 		w_array: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
 		h_array: The frequency response, as complex numbers. [ndarray]
 		FMIN: Minimum frequency [float] [Hz]
 		FMAX: Maximum frequency [float] [Hz]
-		filter_type: filter type [string]
-		filter_order: filter order [integer]
-		filter_ripple: filter ripple (if Chebyshev I filter) [float]
+		FILTER_TYPE: filter type [string]
+		FILTER_ORDER: filter order [integer]
+		FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
 	Returns:
 		fig: Figure handle (:class:`~matplotlib.figure.Figure`)
 	'''
 	height = []
-	for ii in range(nbands):
-		if freq_band_type == '2_octave_over':
+	for ii in range(NBANDS):
+		if FREQ_BAND_TYPE == '2_octave_over':
 			height.append(freqlist[ii+2]- freqlist[ii])
 		else:	
 			height.append(freqlist[ii+1]- freqlist[ii])
@@ -86,12 +86,12 @@ def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nband
 	ax0.set_title('a) Array Geometry', loc='left', fontsize=fonts+2, fontweight='bold')
 
 	ax1 = plt.subplot(gs[0,1]) 
-	if freq_band_type == '2_octave_over':
+	if FREQ_BAND_TYPE == '2_octave_over':
 		ax1.barh(freqlist[:-2], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k', alpha=0.25)
 	else:
 		ax1.barh(freqlist[:-1], WINLEN_list, height=height, align='edge', color='grey', edgecolor='k', alpha=0.5)
 	
-	if freq_band_type == 'linear':
+	if FREQ_BAND_TYPE == 'linear':
 		ax1.set_ylim(-0.1,FMAX+1)
 	else:
 		plt.yscale('log')
@@ -105,12 +105,12 @@ def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nband
 	ax1.set_xlabel('Window Length [s]',fontsize=fonts+2, fontweight='bold')
 	ax1.set_ylabel('Frequency [Hz]',fontsize=fonts+2, fontweight='bold')
 	ax1.set_title('b) Window Length', loc='left', fontsize=fonts+2, fontweight='bold')
-	ax1.text(0.02, 0.95, '# of Bands = ' + str(nbands), transform=ax1.transAxes, horizontalalignment='left', fontsize=fonts-2)
+	ax1.text(0.02, 0.95, '# of Bands = ' + str(NBANDS), transform=ax1.transAxes, horizontalalignment='left', fontsize=fonts-2)
 	ax1.text(0.98, 0.95, 'FMIN = ' + str(FMIN) + ', FMAX = ' + str(FMAX), transform=ax1.transAxes, horizontalalignment='right', fontsize=fonts-2)
 	
 
 	ax2 = plt.subplot(gs[1,0:2]) 
-	for ii in range(nbands):
+	for ii in range(NBANDS):
 	    temp_w = w_array[ii,:-1]
 	    temp_h = h_array[ii,:-1]
 	    ax2.semilogx(temp_w, 20 * np.log10(abs(temp_h)))
@@ -121,10 +121,10 @@ def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nband
 	ax2.set_xlim(FMIN-0.01,FMAX+1)
 	ax2.set_ylim(-3,0.4)
 	ax2.set_title('c) Narrow Band Filters', loc='left', fontsize=fonts+2, fontweight='bold')
-	ax2.text(0.02, 0.95, 'Filter Type = ' + filter_type, transform=ax2.transAxes, horizontalalignment='left', fontsize=fonts-2)
-	ax2.text(0.98, 0.95, 'Filter Order = ' + str(filter_order), transform=ax2.transAxes, horizontalalignment='right', fontsize=fonts-2)
-	if filter_type == 'cheby1':
-	    ax2.text(0.5, 0.95, 'Ripple = ' + str(filter_ripple), transform=ax2.transAxes, horizontalalignment='center', fontsize=fonts-2)
+	ax2.text(0.02, 0.95, 'Filter Type = ' + FILTER_TYPE, transform=ax2.transAxes, horizontalalignment='left', fontsize=fonts-2)
+	ax2.text(0.98, 0.95, 'Filter Order = ' + str(FILTER_ORDER), transform=ax2.transAxes, horizontalalignment='right', fontsize=fonts-2)
+	if FILTER_TYPE == 'cheby1':
+	    ax2.text(0.5, 0.95, 'Ripple = ' + str(FILTER_RIPPLE), transform=ax2.transAxes, horizontalalignment='center', fontsize=fonts-2)
 	plt.tight_layout()
 	return fig
 
@@ -133,21 +133,21 @@ def processing_parameters_plot(rij, freq_band_type, freqlist, WINLEN_list, nband
 
 
 
-def narrow_band_plot(FMIN, FMAX, st, nbands, freqlist, freq_band_type, vel_array, baz_array, mdccm_array, t_array, num_compute_list, mdccm_thresh):
+def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array, baz_array, mdccm_array, t_array, num_compute_list, MDCCM_THRESH):
 	'''
 	Plots the results for narrow band least squares processing
 	Args:
 		FMIN: Minimum frequency [float] [Hz]
 		FMAX: Maximum frequency [float] [Hz]
 		st: Filtered data. Assumes response has been removed. (:class:`~obspy.core.stream.Stream`)
-		nbands: number of frequency bands [integer]
+		NBANDS: number of frequency bands [integer]
 		freqlist: List of frequency bounds for narrow band processing
 		vel_array: array of trace velocity processing results
 		baz_array: array of backazimuth processing results
 		mdccm_array: array of MdCCM processing results
 		t_array: array of times for processing results
 		num_compute_list: list of number of windows for each frequency band array processing
-		mdccm_thresh: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
+		MDCCM_THRESH: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
 	Returns:
 		fig: Figure handle (:class:`~matplotlib.figure.Figure`)
 	'''
@@ -171,9 +171,9 @@ def narrow_band_plot(FMIN, FMAX, st, nbands, freqlist, freq_band_type, vel_array
 	ax4 = plt.subplot(gs[4,0])  # Scatter Plot
 	ax5 = plt.subplot(gs[5,0])  # Scatter Plot Trace Velocity
 
-	for ii in range(nbands): 
+	for ii in range(NBANDS): 
 	    # Check if overlapping bands
-	    if freq_band_type == '2_octave_over':
+	    if FREQ_BAND_TYPE == '2_octave_over':
 	    	tempfmin = freqlist[ii]
 	    	tempfmax = freqlist[ii+2]
 	    # All others
@@ -214,7 +214,7 @@ def narrow_band_plot(FMIN, FMAX, st, nbands, freqlist, freq_band_type, vel_array
 	    # Loop through each narrow band results vector and plot rectangles/scatter points
 	    for jj in range(len(t_float)-1):
 	        width_temp = t_float[jj+1] - t_float[jj]
-	        if mdccm_float[jj] >= mdccm_thresh: 
+	        if mdccm_float[jj] >= MDCCM_THRESH: 
 	            x_temp = t_float[jj]
 	            y_temp = tempfmin
 
@@ -241,7 +241,7 @@ def narrow_band_plot(FMIN, FMAX, st, nbands, freqlist, freq_band_type, vel_array
 	    # MdCCM Loop through each narrow band results vector and plot rectangles/scatter points
 	    for jj in range(len(t_float)-1):
 	        width_temp = t_float[jj+1] - t_float[jj]
-	        if mdccm_float[jj] < mdccm_thresh: 
+	        if mdccm_float[jj] < MDCCM_THRESH: 
 	            x_temp = t_float[jj]
 	            y_temp = tempfmin
 	            # MdCCM Plot 
@@ -346,19 +346,19 @@ def narrow_band_plot(FMIN, FMAX, st, nbands, freqlist, freq_band_type, vel_array
 
 
 
-def baz_freq_plot(FMIN, FMAX, nbands, freqlist, baz_array, mdccm_array, t_array, num_compute_list, mdccm_thresh):
+def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, baz_array, mdccm_array, t_array, num_compute_list, MDCCM_THRESH):
 	'''
 	Plots the backazimuth through time colored by frequency for narrow band least squares processing; good for weeks/months processing
 	Args:
 		FMIN: Minimum frequency [float] [Hz]
 		FMAX: Maximum frequency [float] [Hz]
-		nbands: number of frequency bands [integer]
+		NBANDS: number of frequency bands [integer]
 		freqlist: List of frequency bounds for narrow band processing
 		baz_array: array of backazimuth processing results
 		mdccm_array: array of MdCCM processing results
 		t_array: array of times for processing results
 		num_compute_list: list of number of windows for each frequency band array processing
-		mdccm_thresh: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
+		MDCCM_THRESH: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
 	Returns:
 		fig: Figure handle (:class:`~matplotlib.figure.Figure`)
 	'''
@@ -373,7 +373,7 @@ def baz_freq_plot(FMIN, FMAX, nbands, freqlist, baz_array, mdccm_array, t_array,
 	ax1 = plt.subplot(gs[0,0])  # Scatter Plot
 
 
-	for ii in range(nbands):
+	for ii in range(NBANDS):
 
 	    # Frequency band info
 	    tempfmin = freqlist[ii]
@@ -400,7 +400,7 @@ def baz_freq_plot(FMIN, FMAX, nbands, freqlist, baz_array, mdccm_array, t_array,
 	    # Loop through each narrow band results vector and plot rectangles/scatter points
 	    for jj in range(len(t_float)-1):
 	        #width_temp = t_float[jj+1] - t_float[jj]
-	        if mdccm_float[jj] >= mdccm_thresh: 
+	        if mdccm_float[jj] >= MDCCM_THRESH: 
 	            #x_temp = t_float[jj]
 	            #y_temp = tempfmin
 

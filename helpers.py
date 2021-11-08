@@ -4,70 +4,83 @@ from scipy import signal
 
 
 
-def get_freqlist(FMIN, FMAX, freq_band_type, nbands):
+def get_freqlist(FMIN, FMAX, FREQ_BAND_TYPE, NBANDS):
 	'''
 	Obtains list of narrow frequency band limits
 	Args:
 		FMIN: Minimum frequency [float] [Hz]
 		FMAX: Maximum frequency [float] [Hz]
-		freq_band_type: `linear' or 'log' for frequency band width [string]
-		nbands: number of frequency bands [integer]
+		FREQ_BAND_TYPE: `linear' or 'log' for frequency band width [string]
+		NBANDS: number of frequency bands [integer]
 	Returns:
 		freqlist: list of narrow frequency band limits
 	'''
 	freqrange = FMAX - FMIN
 
-	if freq_band_type == 'linear':
-		freqinterval = freqrange / nbands
+	if FREQ_BAND_TYPE == 'linear':
+		freqinterval = freqrange / NBANDS
 		freqlist = np.arange(FMIN, FMAX+freqinterval, freqinterval)
-		nbands_calc = nbands
+		nbands_calc = NBANDS
 		FMAX_calc = FMAX
 
-	elif freq_band_type == 'log':
+	elif FREQ_BAND_TYPE == 'log':
 		FMINL = math.log(FMIN, 10)
 		FMAXL = math.log(FMAX, 10)
-		freqlist = np.logspace(FMINL, FMAXL, num = nbands+1)
-		nbands_calc = nbands
+		freqlist = np.logspace(FMINL, FMAXL, num = NBANDS+1)
+		nbands_calc = NBANDS
 		FMAX_calc = FMAX
 
-	elif freq_band_type == 'octave':
+	elif FREQ_BAND_TYPE == 'octave':
 		# octave width; upper frequency (f2) is twice the lower frequency (f1)
 		freqlist=[FMIN,]
-		#for ii in range(nbands):
+		#for ii in range(NBANDS):
 		#	if freqlist[ii]<=FMAX:
 		#		freqlist.append(2*freqlist[ii])
 		while 2*freqlist[-1]<=FMAX:
 			freqlist.append(2*freqlist[-1])
-		# double check nbands
+		# double check NBANDS
 		nbands_calc = int(len(freqlist)) -1
 		FMAX_calc = freqlist[-1]
 
-	elif freq_band_type == '2_octave_over':
+	elif FREQ_BAND_TYPE == '2_octave_over':
 		# e.g. used in Green and Bowers (2010), JGR
 		# two-octave bands that overlap by 1 octave
 		# upper frequency (f2) is 4 times the lower frequency (f1)
 		#freqlist = [FMIN,4*FMIN]
 		freqlist = [FMIN,]
-		#for ii in range(nbands):
+		#for ii in range(NBANDS):
 		#	if freqlist[ii]<=FMAX:
 		#		freqlist.append(2*freqlist[ii])
 		while 2*freqlist[-1]<=FMAX:
 			freqlist.append(2*freqlist[-1])
 			#freqlist.append(4*freqlist[-1])
-		# double check nbands
+		# double check NBANDS
 		#nbands_calc = int(len(freqlist)/2) 
 		nbands_calc = int(len(freqlist)) -2
 		FMAX_calc = freqlist[-1]
 
-	elif freq_band_type == 'onethird_octave':
+	elif FREQ_BAND_TYPE == 'onethird_octave':
 		# e.g. Garces (2013), Inframatics
 		# a one third octave is when the upper band edge (f2) is the lower band edge (f1) times the cubed root of 2
 		freqlist=[FMIN,]
 		while freqlist[-1]* (2** (1./3.)) <=FMAX:
 			freqlist.append(freqlist[-1]* (2** (1./3.)))
-		# double check nbands
+		# double check NBANDS
 		nbands_calc = int(len(freqlist)) -1
 		FMAX_calc = freqlist[-1]
+
+	elif FREQ_BAND_TYPE == 'octave_linear':
+		# octave width from FMIN to the switch frequency, then linear until FMAX
+		switch_freq = 2
+		freqlist=[FMIN,]
+		while 2*freqlist[-1]<=switch_freq:
+			freqlist.append(2*freqlist[-1])
+		temp_nbands = NBANDS - len(freqlist)
+		freqinterval = (FMAX-freqlist[-1]) / temp_nbands
+		freqlist = freqlist + list(np.arange(freqlist[-1], FMAX+freqinterval, freqinterval))
+		# double check NBANDS
+		nbands_calc = int(len(freqlist)) -1
+		FMAX_calc = FMAX
 
 
 
@@ -75,41 +88,41 @@ def get_freqlist(FMIN, FMAX, freq_band_type, nbands):
 
 
 
-def get_winlenlist(window_length, nbands, WINLEN, WINLEN_1, WINLEN_X):
+def get_winlenlist(WINDOW_LENGTH_TYPE, NBANDS, WINLEN, WINLEN_1, WINLEN_X):
 	'''
 	Obtains list of window length for narrow band processing
 	Args:
-		window_length: 'constant' or 'adaptive' [string]
-		nbands: number of frequency bands [integer]
-		WINLEN: window length [s]; used if window_length = 'constant' AND if window_length = '1/f' (because of broadband processing)
-		WINLEN_1: window length for band 1 (lowest frequency) [s]; only used if window_length = 'adaptive'
-		WINLEN_X: window length for band X (highest frequency) [s]; only used if window_length = 'adaptive'
+		WINDOW_LENGTH_TYPE: 'constant' or 'adaptive' [string]
+		NBANDS: number of frequency bands [integer]
+		WINLEN: window length [s]; used if WINDOW_LENGTH_TYPE = 'constant' AND if WINDOW_LENGTH_TYPE = '1/f' (because of broadband processing)
+		WINLEN_1: window length for band 1 (lowest frequency) [s]; only used if WINDOW_LENGTH_TYPE = 'adaptive'
+		WINLEN_X: window length for band X (highest frequency) [s]; only used if WINDOW_LENGTH_TYPE = 'adaptive'
 	Returns:
 		WINLEN_list: list of window length for narrow band processing
 	'''
-	if window_length == 'constant':
+	if WINDOW_LENGTH_TYPE == 'constant':
 		WINLEN_list = [] 
-		for ii in range(nbands):
+		for ii in range(NBANDS):
 			WINLEN_list.append(WINLEN)
-	elif window_length == 'adaptive':
+	elif WINDOW_LENGTH_TYPE == 'adaptive':
 		# varies linearly with period
-		WINLEN_list = np.linspace(WINLEN_1, WINLEN_X, num=nbands)
+		WINLEN_list = np.linspace(WINLEN_1, WINLEN_X, num=NBANDS)
 		WINLEN_list = [int(item) for item in WINLEN_list]
 
 	return WINLEN_list
 
 
 
-def filter_data(st, filter_type, FMIN, FMAX, filter_order, filter_ripple):
+def filter_data(st, FILTER_TYPE, FMIN, FMAX, FILTER_ORDER, FILTER_RIPPLE):
 	'''
 	Filter and taper the data
 	Args:
 		st: array data (:class:`~obspy.core.stream.Stream`)
-		filter_type: filter type; 'butter', 'cheby1' [string]
+		FILTER_TYPE: filter type; 'butter', 'cheby1' [string]
 		FMIN: Minimum frequency [float] [Hz]
 		FMAX: Maximum frequency [float] [Hz]
-		filter_order: filter order [integer]
-		filter_ripple: filter ripple (if Chebyshev I filter) [float]
+		FILTER_ORDER: filter order [integer]
+		FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
 	Returns:
 		stf: Filtered array data (:class:`~obspy.core.stream.Stream`)
 		Fs: Sampling Frequency [Hz] [float]
@@ -118,12 +131,12 @@ def filter_data(st, filter_type, FMIN, FMAX, filter_order, filter_ripple):
 	'''
 	stf = st.copy()
 	Fs = stf[0].stats.sampling_rate
-	if filter_type == 'butter': 
-		stf.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=filter_order, zerophase = True)
-		sos = signal.iirfilter(filter_order, [FMIN, FMAX], btype='band',ftype='butter', fs=Fs, output='sos')    
-	elif filter_type == 'cheby1': 
+	if FILTER_TYPE == 'butter': 
+		stf.filter('bandpass', freqmin = FMIN, freqmax = FMAX, corners=FILTER_ORDER, zerophase = True)
+		sos = signal.iirfilter(FILTER_ORDER, [FMIN, FMAX], btype='band',ftype='butter', fs=Fs, output='sos')    
+	elif FILTER_TYPE == 'cheby1': 
 		Wn = [FMIN, FMAX]
-		sos = signal.iirfilter(filter_order, [FMIN, FMAX], rp=filter_ripple, btype='band', analog=False, ftype='cheby1', fs=Fs,output='sos')
+		sos = signal.iirfilter(FILTER_ORDER, [FMIN, FMAX], rp=FILTER_RIPPLE, btype='band', analog=False, ftype='cheby1', fs=Fs,output='sos')
 		for ii in range(len(st)):
 			# Put signal in numpy array
 			temp_array = stf[ii].data

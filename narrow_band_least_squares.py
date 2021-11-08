@@ -7,7 +7,7 @@ import multiprocessing
 from joblib import Parallel, delayed
 
 
-def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h, freqlist, freq_band_type, freq_resp_list, filter_type, filter_order, filter_ripple):
+def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
 	'''
 	Runs narrow band least squares processing
 	Args:
@@ -16,15 +16,15 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h
 		ALPHA: Use ordinary least squares processing (not trimmed least squares)
 		st: array data (:class:`~obspy.core.stream.Stream`)
 		rij: array coordinates
-		nbands: number of frequency bands [integer]
+		NBANDS: number of frequency bands [integer]
 		w: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
 		h: The frequency response, as complex numbers. [ndarray]
 		freqlist: list of narrow frequency band limits
-		freq_band_type: `linear' or 'log' for frequency band width [string]
+		FREQ_BAND_TYPE: `linear' or 'log' for frequency band width [string]
 		freq_resp_list: list for computing filter frequency response
-		filter_type: filter type [string]
-		filter_order: filter order [integer]
-		filter_ripple: filter ripple (if Chebyshev I filter) [float]
+		FILTER_TYPE: filter type [string]
+		FILTER_ORDER: filter order [integer]
+		FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
 	Returns:
 		vel_array: numpy array with trace velocity results 
 		baz_array: numpy array with backazimuth results 
@@ -46,25 +46,25 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h
 	vector_len = int(nits/Fs)
 
 	# Initialize arrays to be as large as the number of windows for the highest frequency band
-	vel_array = np.empty((nbands,vector_len))
-	baz_array = np.empty((nbands,vector_len))
-	mdccm_array = np.empty((nbands,vector_len))
-	t_array = np.empty((nbands,vector_len))
+	vel_array = np.empty((NBANDS,vector_len))
+	baz_array = np.empty((NBANDS,vector_len))
+	mdccm_array = np.empty((NBANDS,vector_len))
+	t_array = np.empty((NBANDS,vector_len))
 
 	# Initialize Frequency response arrays
-	w_array = np.empty((nbands,len(w)), dtype = 'complex_')
-	h_array = np.empty((nbands,len(h)), dtype = 'complex_')
+	w_array = np.empty((NBANDS,len(w)), dtype = 'complex_')
+	h_array = np.empty((NBANDS,len(h)), dtype = 'complex_')
 
 
 	########################################
 	### Run Narrow Band Array Processing ###
 	########################################
 	num_compute_list = []
-	#num_compute_list = np.zeros((nbands))
+	#num_compute_list = np.zeros((NBANDS))
 
-	for ii in range(nbands): 
+	for ii in range(NBANDS): 
 		# Check if overlapping bands
-		if freq_band_type == '2_octave_over':
+		if FREQ_BAND_TYPE == '2_octave_over':
 			tempfmin = freqlist[ii]
 			tempfmax = freqlist[ii+2]
 		# All others
@@ -72,7 +72,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h
 			tempfmin = freqlist[ii]
 			tempfmax = freqlist[ii+1]
 
-		tempst_filter, Fs, sos = filter_data(st, filter_type, tempfmin, tempfmax, filter_order, filter_ripple)
+		tempst_filter, Fs, sos = filter_data(st, FILTER_TYPE, tempfmin, tempfmax, FILTER_ORDER, FILTER_RIPPLE)
 		w, h = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
 		w_array[ii,:] = w
 		h_array[ii,:] = h
@@ -105,18 +105,18 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h
 
 
 
-def narrow_band_loop(ii, freqlist, freq_band_type, freq_resp_list, st, filter_type, filter_order, filter_ripple, rij, WINLEN_list, WINOVER, ALPHA, vector_len):
+def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE, rij, WINLEN_list, WINOVER, ALPHA, vector_len):
 	'''
 	Loop designed for narrow band least squares processing parallelization
 	Args:
 		ii: index for narrow frequency band to be used
 		freqlist: list of narrow frequency band limits
-		freq_band_type; `linear' or 'log' for frequency band width [string]
+		FREQ_BAND_TYPE; `linear' or 'log' for frequency band width [string]
 		freq_resp_list: list for computing filter frequency response
 		st: array data (:class:`~obspy.core.stream.Stream`)
-		filter_type: filter type [string]
-		filter_order: filter order [integer]
-		filter_ripple: filter ripple (if Chebyshev I filter) [float]
+		FILTER_TYPE: filter type [string]
+		FILTER_ORDER: filter order [integer]
+		FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
 		rij: array coordinates
 		WINLEN_list: list of window length for narrow band processing
 		WINOVER: window overlap [float]
@@ -131,7 +131,7 @@ def narrow_band_loop(ii, freqlist, freq_band_type, freq_resp_list, st, filter_ty
 		w_temp: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
 		h_temp: The frequency response, as complex numbers. [ndarray]	
 	'''
-	if freq_band_type == '2_octave_over':
+	if FREQ_BAND_TYPE == '2_octave_over':
 		tempfmin = freqlist[ii]
 		tempfmax = freqlist[ii+2]
 	# All others
@@ -139,7 +139,7 @@ def narrow_band_loop(ii, freqlist, freq_band_type, freq_resp_list, st, filter_ty
 		tempfmin = freqlist[ii]
 		tempfmax = freqlist[ii+1]
 
-	tempst_filter, Fs, sos = filter_data(st, filter_type, tempfmin, tempfmax, filter_order, filter_ripple)
+	tempst_filter, Fs, sos = filter_data(st, FILTER_TYPE, tempfmin, tempfmax, FILTER_ORDER, FILTER_RIPPLE)
 	w_temp, h_temp = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
 
     # Run Array Processing 
@@ -167,7 +167,7 @@ def narrow_band_loop(ii, freqlist, freq_band_type, freq_resp_list, st, filter_ty
 
 
 
-def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nbands, w, h, freqlist, freq_band_type, freq_resp_list, filter_type, filter_order, filter_ripple):
+def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
 	'''
 	Runs narrow band least squares processing
 	Args:
@@ -176,15 +176,15 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nba
 		ALPHA: Use ordinary least squares processing (not trimmed least squares)
 		st: array data (:class:`~obspy.core.stream.Stream`)
 		rij: array coordinates
-		nbands: number of frequency bands [integer]
+		NBANDS: number of frequency bands [integer]
 		w: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
 		h: The frequency response, as complex numbers. [ndarray]
 		freqlist: list of narrow frequency band limits
-		freq_band_type: `linear' or 'log' for frequency band width [string]
+		FREQ_BAND_TYPE: `linear' or 'log' for frequency band width [string]
 		freq_resp_list: list for computing filter frequency response
-		filter_type: filter type [string]
-		filter_order: filter order [integer]
-		filter_ripple: filter ripple (if Chebyshev I filter) [float]
+		FILTER_TYPE: filter type [string]
+		FILTER_ORDER: filter order [integer]
+		FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
 	Returns:
 		vel_array: numpy array with trace velocity results 
 		baz_array: numpy array with backazimuth results 
@@ -208,17 +208,17 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nba
 	vector_len = int(nits/Fs)
 	
 	# Initialize arrays to be as large as the number of windows for the highest frequency band
-	vel_array = np.zeros((nbands,vector_len))
+	vel_array = np.zeros((NBANDS,vector_len))
 	#print(vel_array.shape)
-	baz_array = np.zeros((nbands,vector_len))
-	mdccm_array = np.zeros((nbands,vector_len))
-	t_array = np.zeros((nbands,vector_len))
+	baz_array = np.zeros((NBANDS,vector_len))
+	mdccm_array = np.zeros((NBANDS,vector_len))
+	t_array = np.zeros((NBANDS,vector_len))
 
 	# Initialize Frequency response arrays
-	w_array = np.zeros((nbands,len(w)), dtype = 'complex_')
-	h_array = np.zeros((nbands,len(h)), dtype = 'complex_')
+	w_array = np.zeros((NBANDS,len(w)), dtype = 'complex_')
+	h_array = np.zeros((NBANDS,len(h)), dtype = 'complex_')
 
-	#num_compute_list = np.zeros((nbands))
+	#num_compute_list = np.zeros((NBANDS))
 	num_compute_list = []
 	
 	########################################
@@ -227,13 +227,13 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, nba
 	# Parallel Processing
 	#num_cores = int(multiprocessing.cpu_count()/2)
 	#print(num_cores)
-	results = Parallel(n_jobs=-1)(delayed(narrow_band_loop)(ii, freqlist, freq_band_type, freq_resp_list, st, filter_type, filter_order, filter_ripple, rij, WINLEN_list, WINOVER, ALPHA, vector_len) for ii in range(nbands))
+	results = Parallel(n_jobs=-1)(delayed(narrow_band_loop)(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE, rij, WINLEN_list, WINOVER, ALPHA, vector_len) for ii in range(NBANDS))
 
 
 	###################################################################
 	### Transform results of parallelization to numpy array outputs ###
 	###################################################################
-	for jj in range(nbands):
+	for jj in range(NBANDS):
 		vel_array[jj,:] = results[jj][0]
 		baz_array[jj,:] = results[jj][1]
 		mdccm_array[jj,:] = results[jj][2]
