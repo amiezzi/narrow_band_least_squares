@@ -18,9 +18,9 @@ import numpy as np
 import math as math
 from scipy import signal 
 import matplotlib.pyplot as plt
-from narrow_band_least_squares import narrow_band_least_squares, narrow_band_least_squares_parallel
-from helpers import get_freqlist, get_winlenlist, filter_data, write_txtfile, read_txtfile
-from plotting import broad_filter_response_plot, processing_parameters_plot, narrow_band_plot, baz_freq_plot
+from narrow_band_least_squares import narrow_band_least_squares
+from helpers import get_freqlist, get_winlenlist, filter_data
+from plotting import broad_filter_response_plot, processing_parameters_plot, narrow_band_plot
 from array_processing.algorithms.helpers import getrij
 from array_processing.tools.plotting import array_plot
 from lts_array import ltsva
@@ -55,7 +55,7 @@ FILTER_RIPPLE = 0.01
 
 ### Window Length ###
 WINOVER = 0.5               # window overlap
-WINDOW_LENGTH_TYPE = 'adaptive'  # 'constant' or 'adaptive'
+WINDOW_LENGTH_TYPE = 'constant'  # 'constant' or 'adaptive'
 WINLEN = 50                 # window length [s]; used if WINDOW_LENGTH_TYPE = 'constant' AND if WINDOW_LENGTH_TYPE = 'adaptive' (because of broadband processing)
 WINLEN_1 = 60              # window length for band 1 (lowest frequency) [s]; only used if WINDOW_LENGTH_TYPE = 'adaptive'
 WINLEN_X = 30               # window length for band X (highest frequency) [s]; only used if WINDOW_LENGTH_TYPE = 'adaptive'

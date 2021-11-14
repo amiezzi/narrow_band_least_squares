@@ -6,6 +6,7 @@ from matplotlib import rcParams
 import pylab as pl
 from matplotlib.patches import Rectangle
 import matplotlib.colorbar as cbar
+import time
 
 
 dpi_num = 300
@@ -211,6 +212,26 @@ def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array
 	    colors_mdccm = pl.cm.jet(normal_mdccm(mdccm_float))
 
 
+	    # Find indices where mdccm_float >= MDCCM_THRESH
+	    mdccm_good_idx = [jj for jj,v in enumerate(mdccm_float) if v > MDCCM_THRESH]
+	    # Trim array to only have the indices where mdccm_float >= MDCCM_THRESH
+	    vel_good = [vel_float[jj] for jj in mdccm_good_idx]
+	    baz_good = [baz_float[jj] for jj in mdccm_good_idx]
+	    t_good = [t_float[jj] for jj in mdccm_good_idx]
+
+	   
+	    # Plot the scatter points
+	    tempfavg_array = np.repeat(tempfavg, len(t_good))
+	    # Scatter plot
+	    sc = ax4.scatter(t_good, baz_good, c=tempfavg_array, edgecolors='k', lw=0.3, cmap=cm)
+	    sc.set_clim(cax)
+
+	    # Scatter plot
+	    sc_vel = ax5.scatter(t_good, vel_good, c=tempfavg_array, edgecolors='k', lw=0.3, cmap=cm)
+	    sc_vel.set_clim(cax)
+
+
+
 	    # Loop through each narrow band results vector and plot rectangles/scatter points
 	    for jj in range(len(t_float)-1):
 	        width_temp = t_float[jj+1] - t_float[jj]
@@ -230,6 +251,7 @@ def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array
 	            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_vel[jj])
 	            ax3.add_patch(rect)
 
+	            '''
 	            # Scatter plot
 	            sc = ax4.scatter(t_float[jj], baz_float[jj], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
 	            sc.set_clim(cax)
@@ -237,6 +259,8 @@ def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array
 	            # Scatter plot
 	            sc_vel = ax5.scatter(t_float[jj], vel_float[jj], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
 	            sc_vel.set_clim(cax)
+	            '''
+
 
 	    # MdCCM Loop through each narrow band results vector and plot rectangles/scatter points
 	    for jj in range(len(t_float)-1):
@@ -247,6 +271,8 @@ def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array
 	            # MdCCM Plot 
 	            rect = Rectangle((x_temp, y_temp), width_temp, height_temp, color=colors_mdccm[jj], alpha=0.5)
 	            ax1.add_patch(rect)
+
+
 
 
 	#####################
@@ -346,7 +372,7 @@ def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array
 
 
 
-def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, baz_array, mdccm_array, t_array, num_compute_list, MDCCM_THRESH):
+def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, vel_array, baz_array, mdccm_array, t_array, num_compute_list, MDCCM_THRESH):
 	'''
 	Plots the backazimuth through time colored by frequency for narrow band least squares processing; good for weeks/months processing
 	Args:
@@ -354,6 +380,7 @@ def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, baz_array, mdccm_array, t_array,
 		FMAX: Maximum frequency [float] [Hz]
 		NBANDS: number of frequency bands [integer]
 		freqlist: List of frequency bounds for narrow band processing
+		vel_array
 		baz_array: array of backazimuth processing results
 		mdccm_array: array of MdCCM processing results
 		t_array: array of times for processing results
@@ -396,8 +423,25 @@ def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, baz_array, mdccm_array, t_array,
 	    #normal_baz = pl.Normalize(0, 360)
 	    #colors_baz = pl.cm.jet(normal_baz(baz_float))
 
+	    start = time.time()
 
-	    # Loop through each narrow band results vector and plot rectangles/scatter points
+	    
+	    # Find indices where mdccm_float >= MDCCM_THRESH
+	    mdccm_good_idx = [jj for jj,v in enumerate(mdccm_float) if v > MDCCM_THRESH]
+	    # Trim array to only have the indices where mdccm_float >= MDCCM_THRESH
+	    baz_good = [baz_float[jj] for jj in mdccm_good_idx]
+	    t_good = [t_float[jj] for jj in mdccm_good_idx]
+
+	    # Find indices where 0.2 < baz <0.5
+
+
+	    # Plot the scatter points
+	    tempfavg_array = np.repeat(tempfavg, len(t_good))
+	    sc = ax1.scatter(t_good, baz_good, s=15, c=tempfavg_array, edgecolors='none', cmap=cm)
+	    sc.set_clim(cax)
+		
+	    '''
+	    # Loop through each narrow band results vector and plot scatter points
 	    for jj in range(len(t_float)-1):
 	        #width_temp = t_float[jj+1] - t_float[jj]
 	        if mdccm_float[jj] >= MDCCM_THRESH: 
@@ -405,8 +449,11 @@ def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, baz_array, mdccm_array, t_array,
 	            #y_temp = tempfmin
 
 	            # Scatter plot
-	            sc = ax1.scatter(t_float[jj], baz_float[jj], c=tempfavg, edgecolors='k', lw=0.3, cmap=cm)
+	            sc = ax1.scatter(t_float[jj], baz_float[jj], c=tempfavg, edgecolors='none', cmap=cm)
 	            sc.set_clim(cax)
+	    '''
+	    end = time.time()
+	    print("Time elapsed:", end - start)
 
 
 	#####################
