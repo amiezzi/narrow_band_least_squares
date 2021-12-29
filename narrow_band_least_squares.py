@@ -47,6 +47,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
     vel_array = np.empty((NBANDS,vector_len))
     baz_array = np.empty((NBANDS,vector_len))
     mdccm_array = np.empty((NBANDS,vector_len))
+    sig_tau_array = np.empty((NBANDS,vector_len))
     t_array = np.empty((NBANDS,vector_len))
 
     # Initialize Frequency response arrays
@@ -84,6 +85,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
         baz_float = make_float(baz)
         mdccm_float = make_float(mdccm)
         t_float = make_float(t)
+        sig_tau_float = make_float(sig_tau)
 
 
         ####################################
@@ -93,10 +95,10 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
         baz_array[ii,:len(baz_float)] = baz_float
         mdccm_array[ii,:len(mdccm_float)] = mdccm_float
         t_array[ii,:len(t_float)] = t_float
+        sig_tau_array[ii,:len(sig_tau_float)] = sig_tau_float
         num_compute_list.append(len(vel_float))
-        #num_compute_list[ii]=len(vel_float)
 
-    return vel_array, baz_array, mdccm_array, t_array, num_compute_list, w_array, h_array
+    return vel_array, baz_array, mdccm_array, t_array, sig_tau_array, num_compute_list, w_array, h_array
 
 
 
@@ -148,6 +150,7 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
     baz_float = make_float(baz)
     mdccm_float = make_float(mdccm)
     t_float = make_float(t)
+    sig_tau_float = make_float(sig_tau)
 
 
     ###################################
@@ -158,9 +161,10 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
     baz_float = np.pad(baz_float, (0,vector_len-num_compute))
     mdccm_float = np.pad(mdccm_float, (0,vector_len-num_compute))
     t_float = np.pad(t_float, (0,vector_len-num_compute))
+    sig_tau_float = np.pad(sig_tau_float, (0,vector_len-num_compute))
 
 
-    return vel_float, baz_float, mdccm_float, t_float, num_compute, w_temp, h_temp
+    return vel_float, baz_float, mdccm_float, t_float, sig_tau_float, num_compute, w_temp, h_temp
 
 
 
@@ -212,6 +216,7 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
     baz_array = np.zeros((NBANDS,vector_len))
     mdccm_array = np.zeros((NBANDS,vector_len))
     t_array = np.zeros((NBANDS,vector_len))
+    sig_tau_array = np.zeros((NBANDS,vector_len))
 
     # Initialize Frequency response arrays
     w_array = np.zeros((NBANDS,len(w)), dtype = 'complex_')
@@ -237,12 +242,13 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
         baz_array[jj,:] = results[jj][1]
         mdccm_array[jj,:] = results[jj][2]
         t_array[jj,:] = results[jj][3]
-        num_compute_list.append(int(results[jj][4]))
-        w_array[jj,:] = results[jj][5]
-        h_array[jj,:] = results[jj][6]
+        sig_tau_array[jj,:] = results[jj][4]
+        num_compute_list.append(int(results[jj][5]))
+        w_array[jj,:] = results[jj][6]
+        h_array[jj,:] = results[jj][7]
 
 
-    return vel_array, baz_array, mdccm_array, t_array, num_compute_list, w_array, h_array
+    return vel_array, baz_array, mdccm_array, t_array, sig_tau_array, num_compute_list, w_array, h_array
     
 
 
