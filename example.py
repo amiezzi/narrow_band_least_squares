@@ -1,8 +1,8 @@
 ############################################################################
-################## Narrow Band Least Squares Method ########################
+################## Narrow-Band Least-Squares Method ########################
 ############################################################################
 ### Breaks up frequencies into multiple bands (similar to PMCC method) 
-### Normal least squares uses the entire frequency  band for calculation 
+### Ordinary least-squares uses the entire frequency  band for calculation 
 ### Authors: Sneha Bhetanabhotla, Alex Iezzi, and Robin Matoza 
 ### University of California Santa Barbara 
 ### Contact: Alex Iezzi (amiezzi@ucsb.edu) 
@@ -12,8 +12,9 @@
 ###############
 ### Imports ###
 ###############
+import os
 from waveform_collection import gather_waveforms 
-from obspy.core import UTCDateTime, Stream, read
+from obspy.core import UTCDateTime
 import numpy as np
 import math as math
 from scipy import signal 
@@ -61,13 +62,10 @@ WINLEN_1 = 60              # window length for band 1 (lowest frequency) [s]; on
 WINLEN_X = 30               # window length for band X (highest frequency) [s]; only used if WINDOW_LENGTH_TYPE = 'adaptive'
 
 ### Array processing ###
-ALPHA = 1.0                 # Use ordinary least squares processing (not trimmed least squares)
+ALPHA = 1.0                 # Use ordinary least-squares processing (not trimmed least-squares)
 MDCCM_THRESH = 0.6          # Threshold value of MdCCM for plotting; Must be between 0 and 1
 
 ### Figure Save Options ###
-#save_dir = '/Users/aiezzi/Desktop/NSF_Postdoc/Array_Processing_Research/narrow_band_least_squares/Figures/'         # directory in which to save figures
-
-#save_dir = '/Volumes/IEZZI_USB/Iceland_Research_2021/Least_Squares_Figures/'
 file_type = '.png'                          # file save type
 dpi_num = 300                               # dots per inch for plot save
 
@@ -79,7 +77,8 @@ dpi_num = 300                               # dots per inch for plot save
 ### End User Input ###
 ######################
 ##############################################################################
-
+if not os.path.exists('example_figures/'):
+    os.makedirs('example_figures/')
 
 ##############################################################################
 ###################
@@ -98,14 +97,14 @@ rij = getrij(latlist, lonlist)
 
 ##################################################################################
 ##############################
-### Standard Least Squares ###
+### Ordinary Least-Squares ###
 ##############################
 
-### Run standard least squares ###
+### Run standard least-squares ###
 stf_broad, Fs, sos = filter_data(st, FILTER_TYPE, FMIN, FMAX, FILTER_ORDER, FILTER_RIPPLE)
 
 
-# Least Squares
+# Least-Squares
 vel_broad, baz_broad, t_broad, mdccm_broad, stdict_broad, sig_tau_broad = ltsva(stf_broad, rij, WINLEN, WINOVER, ALPHA)
 fig1, axs1 = array_plot(stf_broad, t_broad, mdccm_broad, vel_broad, baz_broad, ccmplot=True, mcthresh=MDCCM_THRESH, sigma_tau=sig_tau_broad)
 
@@ -130,7 +129,7 @@ plt.close(fig)
 
 ##################################################################################
 #################################
-### Narrow Band Least Squares ###
+### Narrow-Band Least-Squares ###
 #################################
 
 ### Set Up Narrow Frequency Bands ###                                      
@@ -139,13 +138,13 @@ freqlist, NBANDS, FMAX = get_freqlist(FMIN, FMAX, FREQ_BAND_TYPE, NBANDS)
 ### Set Up Window Lengths ###
 WINLEN_list = get_winlenlist(WINDOW_LENGTH_TYPE, NBANDS, WINLEN, WINLEN_1, WINLEN_X)
 
-### Run Narrow Band Least Squares ###
+### Run Narrow-Band Least-Squares ###
 vel_array, baz_array, mdccm_array, t_array, num_compute_list, w_array, h_array = narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w_broad, h_broad, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE)
 #vel_array, baz_array, mdccm_array, t_array, num_compute_list, w_array, h_array = narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w_broad, h_broad, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE)
 
 
 
-### Plot narrow band least squares array processing results ###
+### Plot narrow-band least-squares array processing results ###
 fig = narrow_band_plot(FMIN, FMAX, stf_broad, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array, baz_array, mdccm_array, t_array, num_compute_list, MDCCM_THRESH)
 fig.savefig('example_figures/NarrowLeastSquares', dpi=dpi_num)
 plt.close(fig)
