@@ -11,7 +11,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
     Args:
         WINLEN_list: list of window length for narrow-band processing
         WINOVER: window overlap [float]
-        ALPHA: Use ordinary least-squares processing (not trimmed least-squares)
+        ALPHA: Use ordinary least-squares or LTS processing 
         st: array data (:class:`~obspy.core.stream.Stream`)
         rij: array coordinates
         NBANDS: number of frequency bands [integer]
@@ -28,6 +28,8 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
         baz_array: numpy array with backazimuth results 
         mdccm_array: numpy array with mdccm results 
         t_array: numpy array with times for array processing results 
+        stdict_all: dictionary with dropped elements for LTS [dictionary]
+        sig_tau_array: numpy array of sigma tau values for array processing results 
         num_compute_list: length for processing reults in each frequency band
         w_array: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
         h_array: The frequency response, as complex numbers. [ndarray]  
@@ -49,6 +51,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
     mdccm_array = np.empty((NBANDS,vector_len))
     sig_tau_array = np.empty((NBANDS,vector_len))
     t_array = np.empty((NBANDS,vector_len))
+    stdict_all = {}
 
     # Initialize Frequency response arrays
     w_array = np.empty((NBANDS,len(w)), dtype = 'complex_')
@@ -59,7 +62,6 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
     ### Run Narrow-Band Array Processing ###
     ########################################
     num_compute_list = []
-    #num_compute_list = np.zeros((NBANDS))
 
     for ii in range(NBANDS): 
         # Check if overlapping bands
@@ -95,10 +97,26 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
         baz_array[ii,:len(baz_float)] = baz_float
         mdccm_array[ii,:len(mdccm_float)] = mdccm_float
         t_array[ii,:len(t_float)] = t_float
-        sig_tau_array[ii,:len(sig_tau_float)] = sig_tau_float
         num_compute_list.append(len(vel_float))
 
-    return vel_array, baz_array, mdccm_array, t_array, sig_tau_array, num_compute_list, w_array, h_array
+        if ALPHA == 1.0:
+            sig_tau_float = make_float(sig_tau)
+            sig_tau_array[ii,:len(sig_tau_float)] = sig_tau_float
+            stdict_all = None
+        elif ALPHA < 1.0:
+            sigma_tau_float = None
+            # Append band number to each key in the drop stations dictionary
+            temp_dict = {}
+            for key in stdict:
+                if key != 'size':
+                    new_key = str(ii+1).zfill(2) + '_' + key
+                    temp_dict[new_key] = stdict[key]
+                elif key == 'size':
+                    temp_dict[key] = stdict[key]
+            stdict_all = {**stdict_all, **temp_dict}
+
+
+    return vel_array, baz_array, mdccm_array, t_array, stdict_all, sig_tau_array, num_compute_list, w_array, h_array
 
 
 
@@ -127,6 +145,9 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
         baz_float: backazimuth results for that frequency band
         mdccm_float: mdccm results for that frequency band
         t_float: time results for that frequency band
+        stdict_times: times for dropped elements for that frequency band (portion of 'stdict')
+        stdict_elements: dropped elements for that frequency band (portion of 'stdict')
+        sig_tau_float: sigma tau results for that frequency band
         num_compute: number of windows computed for that narrow frquency band
         w_temp: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
         h_temp: The frequency response, as complex numbers. [ndarray]   
@@ -144,6 +165,7 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
 
     # Run Array Processing 
     vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN_list[ii], WINOVER, ALPHA)
+
 
     # Convert array processing output to numpy array of floats
     vel_float = make_float(vel)
@@ -163,8 +185,21 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
     t_float = np.pad(t_float, (0,vector_len-num_compute))
     sig_tau_float = np.pad(sig_tau_float, (0,vector_len-num_compute))
 
+    if ALPHA == 1.0:
+        stdict_times = None
+        stdict_elements = None
 
-    return vel_float, baz_float, mdccm_float, t_float, sig_tau_float, num_compute, w_temp, h_temp
+    # Deal with 'stdict'
+    # Convert to numpy arrays so it can be be parallelized
+    elif ALPHA < 1.0:
+        temp_data = list(stdict.items())
+        temp_array = np.array(temp_data, dtype=object)
+        stdict_times = temp_array[:,0]
+        stdict_elements = temp_array[:,1]
+
+
+
+    return vel_float, baz_float, mdccm_float, t_float, stdict_times, stdict_elements, sig_tau_float, num_compute, w_temp, h_temp
 
 
 
@@ -172,11 +207,11 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
 def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
     from joblib import Parallel, delayed
     '''
-    Runs narrow-band least-squares processing in paralell
+    Runs narrow-band least-squares processing in parallel
     Args:
         WINLEN_list: list of window length for narrow-band processing
         WINOVER: window overlap [float]
-        ALPHA: Use ordinary least-squares processing (not trimmed least-squares)
+        ALPHA: Use ordinary least-squares or LTS processing 
         st: array data (:class:`~obspy.core.stream.Stream`)
         rij: array coordinates
         NBANDS: number of frequency bands [integer]
@@ -193,6 +228,8 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
         baz_array: numpy array with backazimuth results 
         mdccm_array: numpy array with mdccm results 
         t_array: numpy array with times for array processing results 
+        stdict_all: dictionary with dropped elements for LTS [dictionary]
+        sig_tau_array: numpy array of sigma tau values for array processing results 
         num_compute_list: length for processing reults in each frequency band
         w_array: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
         h_array: The frequency response, as complex numbers. [ndarray]  
@@ -212,17 +249,16 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
     
     # Initialize arrays to be as large as the number of windows for the highest frequency band
     vel_array = np.zeros((NBANDS,vector_len))
-    #print(vel_array.shape)
     baz_array = np.zeros((NBANDS,vector_len))
     mdccm_array = np.zeros((NBANDS,vector_len))
     t_array = np.zeros((NBANDS,vector_len))
     sig_tau_array = np.zeros((NBANDS,vector_len))
+    stdict_all = {}
 
     # Initialize Frequency response arrays
     w_array = np.zeros((NBANDS,len(w)), dtype = 'complex_')
     h_array = np.zeros((NBANDS,len(h)), dtype = 'complex_')
 
-    #num_compute_list = np.zeros((NBANDS))
     num_compute_list = []
     
     ########################################
@@ -230,7 +266,6 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
     ########################################
     # Parallel Processing
     #num_cores = int(multiprocessing.cpu_count()/2)
-    #print(num_cores)
     results = Parallel(n_jobs=-1)(delayed(narrow_band_loop)(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE, rij, WINLEN_list, WINOVER, ALPHA, vector_len) for ii in range(NBANDS))
 
 
@@ -242,13 +277,34 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
         baz_array[jj,:] = results[jj][1]
         mdccm_array[jj,:] = results[jj][2]
         t_array[jj,:] = results[jj][3]
-        sig_tau_array[jj,:] = results[jj][4]
-        num_compute_list.append(int(results[jj][5]))
-        w_array[jj,:] = results[jj][6]
-        h_array[jj,:] = results[jj][7]
+
+        if ALPHA == 1.0:
+            sig_tau_array[jj,:] = results[jj][6]
+            stdict_all = None
+        elif ALPHA < 1.0:
+            sigma_tau_float = None
+            # Put 'stdict' back together
+            stdict_times = results[jj][4]
+            stdict_elements = results[jj][5]
+            stdict = {}
+            for A, B in zip(stdict_times, stdict_elements):
+                stdict[A] = B
+            # Append band number to each key in the drop stations dictionary
+            temp_dict = {}
+            for key in stdict:
+                if key != 'size':
+                    new_key = str(jj+1).zfill(2) + '_' + key
+                    temp_dict[new_key] = stdict[key]
+                elif key == 'size':
+                    temp_dict[key] = stdict[key]
+            stdict_all = {**stdict_all, **temp_dict}
+
+        num_compute_list.append(int(results[jj][7]))
+        w_array[jj,:] = results[jj][8]
+        h_array[jj,:] = results[jj][9]
 
 
-    return vel_array, baz_array, mdccm_array, t_array, sig_tau_array, num_compute_list, w_array, h_array
+    return vel_array, baz_array, mdccm_array, t_array, stdict_all, sig_tau_array, num_compute_list, w_array, h_array
     
 
 
