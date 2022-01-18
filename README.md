@@ -1,5 +1,5 @@
 # narrow_band_least_squares
-Uses the open source [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing) in narrow frequency bands.
+Uses the open source [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing) in multiple sequential narrow frequency bands.
  
 ## Dependencies
 - Follow the instructions to install [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing), which will create the new conda environment `uafinfra`. 
@@ -28,8 +28,9 @@ Run an example script by
 ```
 
 ## Associated Publications
+Please cite the following for any use of this repository, which also has more information on the algorithm and example applications:
+Iezzi, A.M., Matoza R.S., Bhetanabhotla, S., Bishop, J.W., and Fee, D. (*submitted*), Narrow-Band Least-Squares Infrasound Array Processing, *submitted to Seismological Research Letters: Electronic Seismologist*.
 
-## Authors
-- Alex Iezzi 
-- Sneha Bhetanabhotla 
-- Robin Matoza 
+
+For any questions, please contact Alex Iezzi (amiezzi@ucsb.edu)
+
