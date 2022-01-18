@@ -32,6 +32,11 @@ Please cite the following for any use of this repository, which also has more in
 
 Iezzi, A.M., Matoza R.S., Bhetanabhotla, S., Bishop, J.W., and Fee, D. (*submitted*), Narrow-Band Least-Squares Infrasound Array Processing, *submitted to Seismological Research Letters: Electronic Seismologist*.
 
+Please also cite the following paper, as this repository uses their open-source least-squares code:
 
-For any questions, please contact Alex Iezzi (amiezzi@ucsb.edu)
+Bishop, J. W., Fee, D., and Szuberla, C. A. L. (2020).  Improved infrasound array processing with robust estimators. *Geophysical Journal International*, 221(3):2058–2074.
+
+
+## Contact Information
+For any questions, please contact Alex Iezzi (amiezzi@ucsb.edu).
 
