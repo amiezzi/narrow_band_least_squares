@@ -29,6 +29,7 @@ Run an example script by
 
 ## Associated Publications
 Please cite the following for any use of this repository, which also has more information on the algorithm and example applications:
+
 Iezzi, A.M., Matoza R.S., Bhetanabhotla, S., Bishop, J.W., and Fee, D. (*submitted*), Narrow-Band Least-Squares Infrasound Array Processing, *submitted to Seismological Research Letters: Electronic Seismologist*.
 
 
