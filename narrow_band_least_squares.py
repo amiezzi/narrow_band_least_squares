@@ -265,7 +265,6 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
     ### Run Narrow-Band Array Processing ###
     ########################################
     # Parallel Processing
-    #num_cores = int(multiprocessing.cpu_count()/2)
     results = Parallel(n_jobs=-1)(delayed(narrow_band_loop)(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE, rij, WINLEN_list, WINOVER, ALPHA, vector_len) for ii in range(NBANDS))
 
 

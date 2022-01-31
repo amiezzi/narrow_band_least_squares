@@ -15,9 +15,9 @@ fonts = 14
 rcParams.update({'font.size': fonts})
 
 
-def ordinary_filter_response_plot(w, h, FMIN, FMAX, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
+def broadband_filter_response_plot(w, h, FMIN, FMAX, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
     '''
-    Plots the filter frequency response for ordinary least-squares processing
+    Plots the filter frequency response for broadband least-squares processing
     Args:
         w: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
         h: The frequency response, as complex numbers. [ndarray]
@@ -44,13 +44,14 @@ def ordinary_filter_response_plot(w, h, FMIN, FMAX, FILTER_TYPE, FILTER_ORDER, F
     ax0.text(0.02, 0.1, 'Filter Order = ' + str(FILTER_ORDER), transform=ax0.transAxes)
     if FILTER_TYPE == 'cheby1':
         ax0.text(0.02, 0.15, 'Ripple = ' + str(FILTER_RIPPLE), transform=ax0.transAxes)
-    plt.tight_layout()
+    plt.tight_layout()                 
+
     return fig
 
 
-def ordinary_plot(st, vel_array, baz_array, mdccm_array, t_array, MDCCM_THRESH, ALPHA, stdict, sig_tau):
+def broadband_plot(st, vel_array, baz_array, mdccm_array, t_array, MDCCM_THRESH, ALPHA, stdict, sig_tau):
     '''
-    Plots the array processing results for ordinary least-squares processing (no sigma tau or LTS dropped stations)
+    Plots the array processing results for broadband least-squares processing 
     Args:
         st: Filtered data. Assumes response has been removed. (:class:`~obspy.core.stream.Stream`)
         vel_array: array of trace velocity processing results
@@ -58,7 +59,7 @@ def ordinary_plot(st, vel_array, baz_array, mdccm_array, t_array, MDCCM_THRESH, 
         mdccm_array: array of MdCCM processing results
         t_array: array of times for processing results
         MDCCM_THRESH: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
-        ALPHA: Use ordinary least-squares or LTS processing 
+        ALPHA: Use least-squares or LTS processing 
         stdict: dictionary with dropped elements for LTS [dictionary]
         sig_tau: sigma tau processing results
     Returns:
@@ -112,7 +113,7 @@ def ordinary_plot(st, vel_array, baz_array, mdccm_array, t_array, MDCCM_THRESH, 
     ax3.set_xlabel('Time [UTC]', fontsize=fonts+2, fontweight='bold') 
     ax3.set_title('d)', loc='left', fontsize=fonts+2, fontweight='bold')
     ax3.xaxis_date()
-    ax3.set_ylim(0.25,0.45)
+    ax3.set_ylim(0.2,0.5)
     ax3.set_xlim(t_array[0],t_array[-1])
 
     # Sigma Tau or Dropped Elements
@@ -130,7 +131,7 @@ def ordinary_plot(st, vel_array, baz_array, mdccm_array, t_array, MDCCM_THRESH, 
         hc.set_label('MdCCM', fontsize=fonts, fontweight='bold')
 
 
-    elif 0.5 <= ALPHA < 1.0:
+    elif ALPHA < 1.0:
         # Plot LTS Dropped Stations
         ndict = deepcopy(stdict)
         n = ndict['size']
@@ -178,17 +179,17 @@ def ordinary_plot(st, vel_array, baz_array, mdccm_array, t_array, MDCCM_THRESH, 
 
 def narrow_band_processing_parameters_plot(rij, FREQ_BAND_TYPE, freqlist, WINLEN_list, NBANDS, FMIN, FMAX, w_array, h_array, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
     '''
-    Plots the processing parameters for narrow-band least-squares processing
+    Plots the processing parameters for narrow-band least-squares processing 
     Args:
         rij: Coordinates of sensors as eastings & northings in a ``(2, N)`` array [km]
-        FREQ_BAND_TYPE: indicates linear or logarithmic spacing for frequency bands; 'linear' or 'log'
+        FREQ_BAND_TYPE: indicates linear or logarithmic spacing for frequency bands
         freqlist: List of frequency bounds for narrow-band processing
         WINLEN_list: list of window lengths for each narrow frequency band
         NBANDS: number of frequency bands [integer]
-        w_array: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
-        h_array: The frequency response, as complex numbers. [ndarray]
         FMIN: Minimum frequency [float] [Hz]
         FMAX: Maximum frequency [float] [Hz]
+        w_array: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
+        h_array: The frequency response, as complex numbers. [ndarray]
         FILTER_TYPE: filter type [string]
         FILTER_ORDER: filter order [integer]
         FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
@@ -233,14 +234,17 @@ def narrow_band_processing_parameters_plot(rij, FREQ_BAND_TYPE, freqlist, WINLEN
     ax1.set_ylabel('Frequency [Hz]',fontsize=fonts+2, fontweight='bold')
     ax1.set_title('b) Window Length', loc='left', fontsize=fonts+2, fontweight='bold')
     ax1.text(0.02, 0.95, '# of Bands = ' + str(NBANDS), transform=ax1.transAxes, horizontalalignment='left', fontsize=fonts-2)
-    ax1.text(0.98, 0.95, 'FMIN = ' + str(FMIN) + ', FMAX = ' + str(FMAX), transform=ax1.transAxes, horizontalalignment='right', fontsize=fonts-2)
+    ax1.text(0.98, 0.95, 'FMIN = ' + str(round(FMIN, 2)) + ', FMAX = ' + str(round(FMAX, 2)), transform=ax1.transAxes, horizontalalignment='right', fontsize=fonts-2)
     
 
     ax2 = plt.subplot(gs[1,0:2]) 
     for ii in range(NBANDS):
         temp_w = w_array[ii,:-1]
         temp_h = h_array[ii,:-1]
-        ax2.semilogx(temp_w, 20 * np.log10(abs(temp_h)))
+        if FREQ_BAND_TYPE == 'linear':
+            ax2.plot(temp_w, 20 * np.log10(abs(temp_h)))
+        else:
+            ax2.semilogx(temp_w, 20 * np.log10(abs(temp_h)))
         ax2.axvline(x=freqlist[ii], ymax=0.9, color='k', ls='--')
     ax2.axvline(x=freqlist[-1], ymax=0.9, color='k', ls='--')
     ax2.set_ylabel('Amplitude [dB]', fontsize=fonts+2, fontweight='bold')
@@ -262,13 +266,14 @@ def narrow_band_processing_parameters_plot(rij, FREQ_BAND_TYPE, freqlist, WINLEN
 
 def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array, baz_array, mdccm_array, t_array, num_compute_list, MDCCM_THRESH):
     '''
-    Plots the results for narrow-band least-squares processing
+    Plots the results for narrow-band least-squares processing (no sigma tau or dropped stations)
     Args:
         FMIN: Minimum frequency [float] [Hz]
         FMAX: Maximum frequency [float] [Hz]
         st: Filtered data. Assumes response has been removed. (:class:`~obspy.core.stream.Stream`)
         NBANDS: number of frequency bands [integer]
         freqlist: List of frequency bounds for narrow-band processing
+        FREQ_BAND_TYPE: indicates linear or logarithmic spacing for frequency bands
         vel_array: array of trace velocity processing results
         baz_array: array of backazimuth processing results
         mdccm_array: array of MdCCM processing results
@@ -475,13 +480,14 @@ def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array
 
 def narrow_band_stau_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array, baz_array, mdccm_array, t_array, sig_tau_array, num_compute_list, MDCCM_THRESH, ALPHA):
     '''
-    Plots the results for narrow-band least-squares processing
+    Plots the results for narrow-band least-squares processing with sigma tau
     Args:
         FMIN: Minimum frequency [float] [Hz]
         FMAX: Maximum frequency [float] [Hz]
         st: Filtered data. Assumes response has been removed. (:class:`~obspy.core.stream.Stream`)
         NBANDS: number of frequency bands [integer]
         freqlist: List of frequency bounds for narrow-band processing
+        FREQ_BAND_TYPE: indicates linear or logarithmic spacing for frequency bands
         vel_array: array of trace velocity processing results
         baz_array: array of backazimuth processing results
         mdccm_array: array of MdCCM processing results
@@ -744,18 +750,19 @@ def narrow_band_stau_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_
 
 def narrow_band_lts_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array, baz_array, mdccm_array, t_array, stdict, num_compute_list, MDCCM_THRESH, ALPHA):
     '''
-    Plots the results for narrow-band least-squares processing
+    Plots the results for narrow-band least-squares processing with overview of dropped stations
     Args:
         FMIN: Minimum frequency [float] [Hz]
         FMAX: Maximum frequency [float] [Hz]
         st: Filtered data. Assumes response has been removed. (:class:`~obspy.core.stream.Stream`)
         NBANDS: number of frequency bands [integer]
         freqlist: List of frequency bounds for narrow-band processing
+        FREQ_BAND_TYPE: indicates linear or logarithmic spacing for frequency bands
         vel_array: array of trace velocity processing results
         baz_array: array of backazimuth processing results
         mdccm_array: array of MdCCM processing results
         t_array: array of times for processing results
-        sig_tau_array: array of sigma tau processing results
+        stdict: dictionary with dropped elements for LTS [dictionary]
         num_compute_list: list of number of windows for each frequency band array processing
         MDCCM_THRESH: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
         ALPHA: Use ordinary least-squares or LTS processing 
@@ -911,6 +918,7 @@ def narrow_band_lts_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_a
             ax6.scatter(np.array([t_float[0], t_float[-1]]), np.array([0.01, 0.01]), c='w')
             ax6.axis('tight')
             ax6.set_ylim(0.5, n+0.5)
+            ax6.set_xlim(t_float[0], t_float[-1])
         
 
             # 'tstampsfloat' values are rounded to 7 places after the decimal because it was saved as a str in dict
@@ -1029,129 +1037,9 @@ def narrow_band_lts_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_a
 
 
 
-
-# def narrow_band_plot_lts_dropped_sta(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array, baz_array, mdccm_array, t_array, stdict, num_compute_list, MDCCM_THRESH):
-#     '''
-#     Plots the results for narrow-band least-squares processing
-#     Args:
-#         FMIN: Minimum frequency [float] [Hz]
-#         FMAX: Maximum frequency [float] [Hz]
-#         st: Filtered data. Assumes response has been removed. (:class:`~obspy.core.stream.Stream`)
-#         NBANDS: number of frequency bands [integer]
-#         freqlist: List of frequency bounds for narrow-band processing
-#         vel_array: array of trace velocity processing results
-#         baz_array: array of backazimuth processing results
-#         mdccm_array: array of MdCCM processing results
-#         t_array: array of times for processing results
-#         sig_tau_array: array of sigma tau processing results
-#         num_compute_list: list of number of windows for each frequency band array processing
-#         MDCCM_THRESH: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
-#     Returns:
-#         fig: Figure handle (:class:`~matplotlib.figure.Figure`)
-#     '''
-#     timevec = st[0].times('matplotlib') # Time vector for plotting
-#     cm = 'turbo'
-#     cm_mdccm = 'YlGnBu'
-#     cax = (FMIN, FMAX)
-
-#     fig = plt.figure(figsize=(15,20), dpi=dpi_num)
-#     gs = gridspec.GridSpec(NBANDS,2, width_ratios=[3,0.1])
-
-#     for ii in range(NBANDS):
-#         # Gather array processing results for this narrow frequency band
-#         t_temp = t_array[ii,:]
-#         mdccm_temp = mdccm_array[ii,:]
-
-#         # Trim each vector to ignore NAN and zero values
-#         t_float = t_temp[:num_compute_list[ii]]
-#         mdccm_float = mdccm_temp[:num_compute_list[ii]]
-
-#         # Dropped station pairs from LTS for this specific band 
-#         ndict = deepcopy(stdict)
-#         band_num = str(ii+1).zfill(2)
-#         temp_dict = {}
-#         for key in ndict:
-#             if key != 'size':
-#                 if key[0:2] == band_num:
-#                     new_key = key[3:]
-#                     temp_dict[new_key] = ndict[key]
-#             elif key == 'size':
-#                 temp_dict[key] = ndict[key] 
-
-#         n = temp_dict['size']
-#         temp_dict.pop('size', None)
-#         tstamps = list(temp_dict.keys())
-#         tstampsfloat = [float(jj) for jj in tstamps]
-
-#         # Set the second colormap for station pairs.
-#         cm2 = plt.get_cmap('binary', (n-1))
-#         initplot = np.empty(len(t_float))
-#         initplot.fill(1)
-
-#         # Plot dropped station pairs from LTS 
-#         ax = plt.subplot(gs[ii,0])  # MdCCM Plot
-
-#         ax.scatter(np.array([t_float[0], t_float[-1]]), np.array([0.01, 0.01]), c='w')
-#         ax.axis('tight')
-#         ax.set_ylabel('Element [#]', fontsize=fonts+2, fontweight='bold')
-#         ax.set_xlabel('Time [UTC]', fontsize=fonts+2, fontweight='bold')
-#         ax.set_xlim(t_float[0], t_float[-1])
-#         ax.set_ylim(0.5, n+0.5)
-#         ax.xaxis_date()
-#         ax.tick_params(axis='x', labelbottom='on')
-#         ax.set_title('Band ' + band_num + ': ' + str(format(freqlist[ii],'.3f')) + ' -- ' + str(format(freqlist[ii+1],'.3f')) + ' Hz', loc='left', fontsize=fonts+2, fontweight='bold')
-
-#         # 'tstampsfloat' values are rounded to 7 places after the decimal because it was saved as a str in dict
-#         # round 't_float' to the same so the values can be compared for MdCCM check
-#         t_float_round = []
-#         for jj in range(len(t_float)):
-#             t_float_round.append(float(format(t_float[jj],'.7f')))
-
-#         # Loop through the stdict for each flag and plot
-#         for jj in range(len(tstamps)):
-#             # Check if the MdCCM is surpassed for this time; plot only if it is
-#             ind = t_float_round.index(tstampsfloat[jj])
-#             if mdccm_float[ind] >= MDCCM_THRESH:
-#                 z = Counter(list(temp_dict[tstamps[jj]]))
-#                 keys, vals = z.keys(), z.values()
-#                 keys, vals = np.array(list(keys)), np.array(list(vals))
-#                 pts = np.tile(tstampsfloat[jj], len(keys))
-#                 sc2 = ax.scatter(pts, keys, c=vals, edgecolors='k', lw=0.1, cmap=cm2, vmin=0.5, vmax=n-0.5)
-
-
-
-
-#     # Add the horizontal colorbar for station pairs.
-#     #ax7 = plt.subplot(gs[7,0])  # Colorbar; Dropped stations
-#     axc = plt.subplot(gs[0:NBANDS+1,1])  # Colorbar; Dropped stations
-#     #p3 = ax6.get_position().get_points().flatten()
-#     #p3 = ax6.get_position()
-#     #ax7 = fig.add_axes([p3.x0, p3.y0-.08, p3.width, 0.02])
-#     #hc2 = plt.colorbar(sc2, orientation="horizontal",
-#     #                       cax=cbaxes2, ax=ax6)
-#     #hc2.set_label('Number of Flagged Element Pairs')
-
-
-#     #plt.colorbar(sc2, orientation="horizontal", cax=ax7)
-#     #ax7.set_xlabel('Number of Flagged Element Pairs', fontsize=fonts+2, fontweight='bold')
-#     plt.colorbar(sc2, orientation="vertical", cax=axc)
-#     axc.set_ylabel('# of Flagged Element Pairs', fontsize=fonts+2, fontweight='bold')
-
-
-
-
-#     plt.tight_layout()
-#     return fig
-
-
-
-
-
-
-
 def narrow_band_lts_dropped_station_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array, baz_array, mdccm_array, t_array, stdict, num_compute_list, MDCCM_THRESH):
     '''
-    Plots the results for narrow-band least-squares processing
+    Plots the dropped stations results for narrow-band least-squares processing
     Args:
         FMIN: Minimum frequency [float] [Hz]
         FMAX: Maximum frequency [float] [Hz]
@@ -1162,7 +1050,7 @@ def narrow_band_lts_dropped_station_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_
         baz_array: array of backazimuth processing results
         mdccm_array: array of MdCCM processing results
         t_array: array of times for processing results
-        sig_tau_array: array of sigma tau processing results
+        stdict: dictionary with dropped elements for LTS [dictionary]
         num_compute_list: list of number of windows for each frequency band array processing
         MDCCM_THRESH: Threshold value of MdCCM for plotting; Must be between 0 and 1 [float]
     Returns:
@@ -1284,13 +1172,14 @@ def narrow_band_lts_dropped_station_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_
 
 def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, vel_array, baz_array, mdccm_array, t_array, num_compute_list, MDCCM_THRESH):
     '''
-    Plots the backazimuth through time colored by frequency for narrow-band least-squares processing; good for weeks/months processing
+    Plots the backazimuth through time colored by frequency for narrow-band least-squares processing
+    Optimized for weeks/months array processing
     Args:
         FMIN: Minimum frequency [float] [Hz]
         FMAX: Maximum frequency [float] [Hz]
         NBANDS: number of frequency bands [integer]
         freqlist: List of frequency bounds for narrow-band processing
-        vel_array
+        vel_array: array of trace velocity processing results
         baz_array: array of backazimuth processing results
         mdccm_array: array of MdCCM processing results
         t_array: array of times for processing results

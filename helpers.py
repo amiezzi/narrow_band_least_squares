@@ -14,6 +14,8 @@ def get_freqlist(FMIN, FMAX, FREQ_BAND_TYPE, NBANDS):
         NBANDS: number of frequency bands [integer]
     Returns:
         freqlist: list of narrow frequency band limits
+        nbands_calc: updated NBANDS (applicable for 'octave' types)
+        FMAX_calc: updated FMAX (applicable for 'octave' types)
     '''
     freqrange = FMAX - FMIN
 
@@ -33,9 +35,6 @@ def get_freqlist(FMIN, FMAX, FREQ_BAND_TYPE, NBANDS):
     elif FREQ_BAND_TYPE == 'octave':
         # octave width; upper frequency (f2) is twice the lower frequency (f1)
         freqlist=[FMIN,]
-        #for ii in range(NBANDS):
-        #   if freqlist[ii]<=FMAX:
-        #       freqlist.append(2*freqlist[ii])
         while 2*freqlist[-1]<=FMAX:
             freqlist.append(2*freqlist[-1])
         # double check NBANDS
@@ -46,16 +45,10 @@ def get_freqlist(FMIN, FMAX, FREQ_BAND_TYPE, NBANDS):
         # e.g. used in Green and Bowers (2010), JGR
         # two-octave bands that overlap by 1 octave
         # upper frequency (f2) is 4 times the lower frequency (f1)
-        #freqlist = [FMIN,4*FMIN]
         freqlist = [FMIN,]
-        #for ii in range(NBANDS):
-        #   if freqlist[ii]<=FMAX:
-        #       freqlist.append(2*freqlist[ii])
         while 2*freqlist[-1]<=FMAX:
             freqlist.append(2*freqlist[-1])
-            #freqlist.append(4*freqlist[-1])
         # double check NBANDS
-        #nbands_calc = int(len(freqlist)/2) 
         nbands_calc = int(len(freqlist)) -2
         FMAX_calc = freqlist[-1]
 
@@ -81,8 +74,6 @@ def get_freqlist(FMIN, FMAX, FREQ_BAND_TYPE, NBANDS):
         # double check NBANDS
         nbands_calc = int(len(freqlist)) -1
         FMAX_calc = FMAX
-
-
 
     return freqlist, nbands_calc, FMAX_calc
 
@@ -166,11 +157,12 @@ def make_float(input):
     return float_array
 
 
-def write_txtfile(save_dir, vel_array, baz_array, mdccm_array, t_array, freqlist, num_compute_list):
+def write_txtfile(save_dir, fname,  vel_array, baz_array, mdccm_array, t_array, freqlist, num_compute_list):
     '''
     Write array processing results to txt file
     Args:
         save_dir: directory in which to save output file
+        fname: output filename root
         vel_array: numpy array with trace velocity results 
         baz_array: numpy array with backazimuth results 
         mdccm_array: numpy array with mdccm results 
@@ -180,7 +172,7 @@ def write_txtfile(save_dir, vel_array, baz_array, mdccm_array, t_array, freqlist
     Returns:
         None
     '''
-    f = open(save_dir + 'narrow_band_processing_results.txt', 'w')
+    f = open(save_dir + fname + '.txt', 'w')
     f.write('Fmin \t Fmax \t Time \t Trace_vel \t Backaz \t MdCCM \n')
     for ii in range(len(freqlist)-1):
         print((num_compute_list[ii]))
@@ -189,11 +181,12 @@ def write_txtfile(save_dir, vel_array, baz_array, mdccm_array, t_array, freqlist
     f.close()
 
 
-def read_txtfile(save_dir):
+def read_txtfile(save_dir, fname):
     '''
     Write array processing results to txt file
     Args:
         save_dir: directory in which to save output file
+        fname: output filename root
     Returns:
         vel_array: numpy array with trace velocity results 
         baz_array: numpy array with backazimuth results 
@@ -202,7 +195,7 @@ def read_txtfile(save_dir):
         freqlist: list of narrow frequency band limits
         num_compute_list: length for processing reults in each frequency band
     '''
-    temp_file = np.genfromtxt(save_dir + 'narrow_band_processing_results.txt', skip_header=1, dtype='float')
+    temp_file = np.genfromtxt(save_dir + fname + '.txt', skip_header=1, dtype='float')
 
     # Create freqlist
     fmin_list = temp_file[:,0]
