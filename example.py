@@ -42,7 +42,7 @@ END = START + 20*60                         # End time; obspy UTCDateTime
 
 ### Filtering ###
 FMIN = 0.1                  # minimum frequency [Hz]
-FMAX = 5.                   # Maximum frequency [Hz]; should not exceed Nyquist
+FMAX = 5.                   # maximum frequency [Hz]; should not exceed Nyquist
 NBANDS = 8                  # number of frequency bands 
 FREQ_BAND_TYPE = 'log'      # indicates spacing for frequency bands; 'linear', 'log', 'octave', '2_octave_over', 'onethird_octave', 'octave_linear'
 FILTER_TYPE = 'cheby1'      # filter type; 'butter', 'cheby1'
@@ -51,7 +51,7 @@ FILTER_RIPPLE = 0.01
 
 ### Window Length ###
 WINOVER = 0.5                   # window overlap
-WINDOW_LENGTH_TYPE = 'adaptive' # 'constant' or 'adaptive'
+WINDOW_LENGTH_TYPE = 'adaptive' # window length type; 'constant' or 'adaptive'
 WINLEN = 50                     # window length [s]; used if WINDOW_LENGTH_TYPE = 'constant' AND if WINDOW_LENGTH_TYPE = 'adaptive' (because of broadband processing)
 WINLEN_1 = 60                   # window length for band 1 (lowest frequency) [s]; only used if WINDOW_LENGTH_TYPE = 'adaptive'
 WINLEN_X = 30                   # window length for band X (highest frequency) [s]; only used if WINDOW_LENGTH_TYPE = 'adaptive'

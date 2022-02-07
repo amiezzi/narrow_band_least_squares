@@ -225,9 +225,9 @@ def narrow_band_processing_parameters_plot(rij, FREQ_BAND_TYPE, freqlist, WINLEN
     else:
         plt.yscale('log')
         if FMAX < 10:
-            ax1.set_ylim(-0.1,FMAX+2)
+            ax1.set_ylim(FMIN,FMAX+2)
         elif FMAX >=10:
-            ax1.set_ylim(-0.1,FMAX+10)
+            ax1.set_ylim(FMIN,FMAX+10)
 
 
     ax1.set_xlabel('Window Length [s]',fontsize=fonts+2, fontweight='bold')
@@ -242,9 +242,9 @@ def narrow_band_processing_parameters_plot(rij, FREQ_BAND_TYPE, freqlist, WINLEN
         temp_w = w_array[ii,:-1]
         temp_h = h_array[ii,:-1]
         if FREQ_BAND_TYPE == 'linear':
-            ax2.plot(temp_w, 20 * np.log10(abs(temp_h)))
+            ax2.plot(np.real(temp_w), 20 * np.log10(abs(temp_h)))
         else:
-            ax2.semilogx(temp_w, 20 * np.log10(abs(temp_h)))
+            ax2.semilogx(np.real(temp_w), 20 * np.log10(abs(temp_h)))
         ax2.axvline(x=freqlist[ii], ymax=0.9, color='k', ls='--')
     ax2.axvline(x=freqlist[-1], ymax=0.9, color='k', ls='--')
     ax2.set_ylabel('Amplitude [dB]', fontsize=fonts+2, fontweight='bold')

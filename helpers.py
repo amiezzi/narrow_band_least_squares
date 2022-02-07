@@ -183,7 +183,7 @@ def write_txtfile(save_dir, fname,  vel_array, baz_array, mdccm_array, t_array, 
 
 def read_txtfile(save_dir, fname):
     '''
-    Write array processing results to txt file
+    Read array processing results from txt file
     Args:
         save_dir: directory in which to save output file
         fname: output filename root
