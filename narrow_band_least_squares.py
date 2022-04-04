@@ -78,6 +78,13 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
         w_array[ii,:] = w
         h_array[ii,:] = h
 
+        # Check bandtimewidth product, BT < 5
+        temp_winlen = WINLEN_list[ii]
+        temp_band = tempfmax - tempfmin
+        temp_BT = temp_winlen * temp_band
+        if temp_BT < 5.0:
+            print('CAUTION: BT < 5! Band between ' + str(tempfmin) + ' Hz and ' + str(tempfmax) + ' Hz has BT = ' + str(temp_BT))
+
 
         # Run Array Processing 
         vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN_list[ii], WINOVER, ALPHA)
@@ -162,6 +169,13 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
 
     tempst_filter, Fs, sos = filter_data(st, FILTER_TYPE, tempfmin, tempfmax, FILTER_ORDER, FILTER_RIPPLE)
     w_temp, h_temp = signal.sosfreqz(sos,freq_resp_list,fs=Fs)
+
+    # Check bandtimewidth product, BT < 5
+    temp_winlen = WINLEN_list[ii]
+    temp_band = tempfmax - tempfmin
+    temp_BT = temp_winlen * temp_band
+    if temp_BT < 5.0:
+        print('CAUTION: BT < 5! Band between ' + str(tempfmin) + ' Hz and ' + str(tempfmax) + ' Hz has BT = ' + str(temp_BT))
 
     # Run Array Processing 
     vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN_list[ii], WINOVER, ALPHA)

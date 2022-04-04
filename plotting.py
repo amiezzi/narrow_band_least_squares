@@ -1188,7 +1188,7 @@ def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, vel_array, baz_array, mdccm_arra
     Returns:
         fig: Figure handle (:class:`~matplotlib.figure.Figure`)
     '''
-    cm = 'jet'
+    cm = 'turbo'
     cax = (FMIN, FMAX)
 
     fig = plt.figure(figsize=(15,7), dpi=dpi_num)
