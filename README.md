@@ -30,7 +30,7 @@ Run an example script by
 ## Associated Publications
 Please cite the following for any use of this repository, which also has more information on the algorithm and example applications:
 
-Iezzi, A.M., Matoza R.S., Bishop, J.W., Bhetanabhotla, S., and Fee, D. (*submitted*), Narrow-Band Least-Squares Infrasound Array Processing, *submitted to Seismological Research Letters: Electronic Seismologist*.
+Iezzi, A.M., Matoza R.S., Bishop, J.W., Bhetanabhotla, S., and Fee, D. (*accepted*), Narrow-Band Least-Squares Infrasound Array Processing, *submitted to Seismological Research Letters: Electronic Seismologist*.
 
 Please also cite the following paper, as this repository uses their open-source least-squares code:
 
