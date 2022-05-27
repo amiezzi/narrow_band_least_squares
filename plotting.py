@@ -930,7 +930,10 @@ def narrow_band_lts_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_a
             # Loop through the stdict for each flag and plot
             for jj in range(len(tstamps)):
                 # Check if the MdCCM is surpassed for this time; plot only if it is
-                ind = t_float_round.index(tstampsfloat[jj])
+                try:
+                    ind = t_float_round.index(tstampsfloat[jj])
+                except:
+                    ind = list(t_float).index(tstampsfloat[jj])
                 if mdccm_float[ind] >= MDCCM_THRESH:
                     z = Counter(list(temp_dict[tstamps[jj]]))
                     keys, vals = z.keys(), z.values()
@@ -1134,7 +1137,11 @@ def narrow_band_lts_dropped_station_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_
         # Loop through the stdict for each flag and plot
         for jj in range(len(tstamps)):
             # Check if the MdCCM is surpassed for this time; plot only if it is
-            ind = t_float_round.index(tstampsfloat[jj])
+            
+            try:
+                ind = t_float_round.index(tstampsfloat[jj])
+            except:
+                ind = list(t_float).index(tstampsfloat[jj])
             if mdccm_float[ind] >= MDCCM_THRESH:
                 z = Counter(list(temp_dict[tstamps[jj]]))
                 keys, vals = z.keys(), z.values()
