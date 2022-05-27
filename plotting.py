@@ -10,7 +10,6 @@ from copy import deepcopy
 from collections import Counter
 
 
-dpi_num = 300
 fonts = 14                                 
 rcParams.update({'font.size': fonts})
 
@@ -29,7 +28,7 @@ def broadband_filter_response_plot(w, h, FMIN, FMAX, FILTER_TYPE, FILTER_ORDER, 
     Returns:
         fig: Figure handle (:class:`~matplotlib.figure.Figure`)
     '''
-    fig = plt.figure(figsize=(8,5), dpi=dpi_num)
+    fig = plt.figure(figsize=(8,5))
     gs = gridspec.GridSpec(1,1)
 
     ax0 = plt.subplot(gs[0,0]) 
@@ -69,7 +68,7 @@ def broadband_plot(st, vel_array, baz_array, mdccm_array, t_array, MDCCM_THRESH,
     cm = 'YlGnBu'
     cax = [0,1.0]
 
-    fig = plt.figure(figsize=(15,15), dpi=dpi_num)
+    fig = plt.figure(figsize=(15,15))
     gs = gridspec.GridSpec(5,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1,1])
 
     # Pressure plot (broadband bandpass filtered data)
@@ -203,7 +202,7 @@ def narrow_band_processing_parameters_plot(rij, FREQ_BAND_TYPE, freqlist, WINLEN
         else:   
             height.append(freqlist[ii+1]- freqlist[ii])
 
-    fig = plt.figure(figsize=(10,10), dpi=dpi_num)
+    fig = plt.figure(figsize=(10,10))
     gs = gridspec.GridSpec(2,2)
 
     ax0 = plt.subplot(gs[0,0]) 
@@ -288,7 +287,7 @@ def narrow_band_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_array
     cm_mdccm = 'YlGnBu'
     cax = (FMIN, FMAX)
 
-    fig = plt.figure(figsize=(15,20), dpi=dpi_num)
+    fig = plt.figure(figsize=(15,20))
     gs = gridspec.GridSpec(6,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1,1,1])
 
     # Pressure plot (broadband bandpass filtered data)
@@ -504,7 +503,7 @@ def narrow_band_stau_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_
     cm_mdccm = 'YlGnBu'
     cax = (FMIN, FMAX)
 
-    fig = plt.figure(figsize=(15,20), dpi=dpi_num)
+    fig = plt.figure(figsize=(15,20))
     gs = gridspec.GridSpec(8,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1,1,1,1,1])
 
     # Pressure plot (broadband bandpass filtered data)
@@ -774,7 +773,7 @@ def narrow_band_lts_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_BAND_TYPE, vel_a
     cm_mdccm = 'YlGnBu'
     cax = (FMIN, FMAX)
 
-    fig = plt.figure(figsize=(15,20), dpi=dpi_num)
+    fig = plt.figure(figsize=(15,20))
     gs = gridspec.GridSpec(7,2, width_ratios=[3,0.1], height_ratios=[1,1,1,1,1,1,1])
 
     # Pressure plot (broadband bandpass filtered data)
@@ -1067,7 +1066,7 @@ def narrow_band_lts_dropped_station_plot(FMIN, FMAX, st, NBANDS, freqlist, FREQ_
     # Find number of elements in array
     num_sta = stdict['size']
 
-    fig = plt.figure(figsize=(15,20), dpi=dpi_num)
+    fig = plt.figure(figsize=(15,20))
     gs = gridspec.GridSpec(num_sta,2, width_ratios=[3,0.1])
 
     for ii in range(NBANDS):
@@ -1198,7 +1197,7 @@ def baz_freq_plot(FMIN, FMAX, NBANDS, freqlist, vel_array, baz_array, mdccm_arra
     cm = 'turbo'
     cax = (FMIN, FMAX)
 
-    fig = plt.figure(figsize=(15,7), dpi=dpi_num)
+    fig = plt.figure(figsize=(15,7))
     gs = gridspec.GridSpec(1,2, width_ratios=[3,0.1], height_ratios=[1])
 
     # Initialize other plots
