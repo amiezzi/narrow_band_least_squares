@@ -1,20 +1,20 @@
 ####################################################################################
 ###################### Narrow-Band Least-Squares Method ############################
 ####################################################################################
-### Breaks up the overall frequency limits into multiple sequential frequency bands 
-### Broadband least-squares uses the entire frequency  band for calculation 
-### Contact: Alex Iezzi (amiezzi@ucsb.edu) 
+### Breaks up the overall frequency limits into multiple sequential frequency bands
+### Broadband least-squares uses the entire frequency  band for calculation
+### Contact: Alex Iezzi (amiezzi@ucsb.edu)
 ####################################################################################
 
 ###############
 ### Imports ###
 ###############
 import os
-from waveform_collection import gather_waveforms 
+from waveform_collection import gather_waveforms
 from obspy.core import UTCDateTime
 import numpy as np
 import math as math
-from scipy import signal 
+from scipy import signal
 import matplotlib.pyplot as plt
 from array_processing.algorithms.helpers import getrij
 from lts_array import ltsva
@@ -32,7 +32,7 @@ from plotting import broadband_filter_response_plot, broadband_plot, narrow_band
 ### Data information ###
 # Data collection
 # IRIS Example; Meteor in Alaska
-SOURCE = 'IRIS'                             # data source      
+SOURCE = 'IRIS'                             # data source
 NETWORK = 'IM'                              # network
 STATION = 'I53H?'                           # station name
 LOCATION = '*'                              # location code
@@ -43,7 +43,7 @@ END = START + 20*60                         # End time; obspy UTCDateTime
 ### Filtering ###
 FMIN = 0.1                  # minimum frequency [Hz]
 FMAX = 5.                   # maximum frequency [Hz]; should not exceed Nyquist
-NBANDS = 8                  # number of frequency bands 
+NBANDS = 8                  # number of frequency bands
 FREQ_BAND_TYPE = 'log'      # indicates spacing for frequency bands; 'linear', 'log', 'octave', '2_octave_over', 'onethird_octave', 'octave_linear'
 FILTER_TYPE = 'cheby1'      # filter type; 'butter', 'cheby1'
 FILTER_ORDER = 2
@@ -98,7 +98,7 @@ rij = getrij(latlist, lonlist)
 
 ### Run broadband least-squares ###
 stf_broad, Fs, sos = filter_data(st, FILTER_TYPE, FMIN, FMAX, FILTER_ORDER, FILTER_RIPPLE)
-vel_broad, baz_broad, t_broad, mdccm_broad, stdict_broad, sig_tau_broad = ltsva(stf_broad, rij, WINLEN, WINOVER, ALPHA)
+vel_broad, baz_broad, t_broad, mdccm_broad, stdict_broad, sig_tau_broad, vel_uncert_broad, baz_uncert_broad = ltsva(stf_broad, latlist, lonlist, WINLEN, WINOVER, ALPHA)
 
 ### Plot broadband array processing results ###
 fig = broadband_plot(stf_broad, vel_broad, baz_broad, mdccm_broad, t_broad, MDCCM_THRESH, ALPHA, stdict_broad, sig_tau_broad)
@@ -122,15 +122,15 @@ plt.close(fig)
 ### Narrow-Band Least-Squares ###
 #################################
 
-### Set Up Narrow Frequency Bands ###                                      
+### Set Up Narrow Frequency Bands ###
 freqlist, NBANDS, FMAX = get_freqlist(FMIN, FMAX, FREQ_BAND_TYPE, NBANDS)
 
 ### Set Up Window Lengths ###
 WINLEN_list = get_winlenlist(WINDOW_LENGTH_TYPE, NBANDS, WINLEN, WINLEN_1, WINLEN_X)
 
 ### Run Narrow-Band Least-Squares ###
-vel_array, baz_array, mdccm_array, t_array, stdict_all, sig_tau_array, num_compute_list, w_array, h_array = narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w_broad, h_broad, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE)
-#vel_array, baz_array, mdccm_array, t_array, stdict_all, sig_tau_array, num_compute_list, w_array, h_array = narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w_broad, h_broad, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE)
+vel_array, baz_array, mdccm_array, t_array, stdict_all, sig_tau_array, num_compute_list, w_array, h_array = narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, latlist, lonlist, NBANDS, w_broad, h_broad, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE)
+#vel_array, baz_array, mdccm_array, t_array, stdict_all, sig_tau_array, num_compute_list, w_array, h_array = narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, latlist, lonlist, NBANDS, w_broad, h_broad, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE)
 
 
 ### Plot narrow-band least-squares array processing results ###
