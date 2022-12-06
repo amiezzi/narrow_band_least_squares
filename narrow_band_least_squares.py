@@ -2,18 +2,19 @@
 import numpy as np
 from helpers import filter_data, make_float
 from scipy import signal
-from lts_array import ltsva 
+from lts_array import ltsva
 
 
-def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
+def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, lat_list, lon_list, NBANDS, w, h, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
     '''
     Runs narrow-band least-squares processing (not paralellized)
     Args:
         WINLEN_list: list of window length for narrow-band processing
         WINOVER: window overlap [float]
-        ALPHA: Use ordinary least-squares or LTS processing 
+        ALPHA: Use ordinary least-squares or LTS processing
         st: array data (:class:`~obspy.core.stream.Stream`)
-        rij: array coordinates
+        lat_list: array latitude coordinates [list]
+        lon_list: array longitude coordinates [list]
         NBANDS: number of frequency bands [integer]
         w: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
         h: The frequency response, as complex numbers. [ndarray]
@@ -24,15 +25,15 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
         FILTER_ORDER: filter order [integer]
         FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
     Returns:
-        vel_array: numpy array with trace velocity results 
-        baz_array: numpy array with backazimuth results 
-        mdccm_array: numpy array with mdccm results 
-        t_array: numpy array with times for array processing results 
+        vel_array: numpy array with trace velocity results
+        baz_array: numpy array with backazimuth results
+        mdccm_array: numpy array with mdccm results
+        t_array: numpy array with times for array processing results
         stdict_all: dictionary with dropped elements for LTS [dictionary]
-        sig_tau_array: numpy array of sigma tau values for array processing results 
+        sig_tau_array: numpy array of sigma tau values for array processing results
         num_compute_list: length for processing reults in each frequency band
         w_array: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
-        h_array: The frequency response, as complex numbers. [ndarray]  
+        h_array: The frequency response, as complex numbers. [ndarray]
     '''
     ###############################
     ### Initialize Numpy Arrays ###
@@ -63,7 +64,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
     ########################################
     num_compute_list = []
 
-    for ii in range(NBANDS): 
+    for ii in range(NBANDS):
         # Check if overlapping bands
         if FREQ_BAND_TYPE == '2_octave_over':
             tempfmin = freqlist[ii]
@@ -86,8 +87,8 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
             print('CAUTION: BT < 5! Band between ' + str(tempfmin) + ' Hz and ' + str(tempfmax) + ' Hz has BT = ' + str(temp_BT))
 
 
-        # Run Array Processing 
-        vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN_list[ii], WINOVER, ALPHA)
+        # Run Array Processing
+        vel, baz, t, mdccm, stdict, sig_tau, vel_uncert, baz_uncert = ltsva(tempst_filter, lat_list, lon_list, WINLEN_list[ii], WINOVER, ALPHA)
 
         # Convert array processing output to numpy array of floats
         vel_float = make_float(vel)
@@ -130,7 +131,7 @@ def narrow_band_least_squares(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h
 
 
 
-def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE, rij, WINLEN_list, WINOVER, ALPHA, vector_len):
+def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE, lat_list, lon_list, WINLEN_list, WINOVER, ALPHA, vector_len):
     '''
     Loop designed for narrow-band least-squares processing parallelization
     Args:
@@ -142,7 +143,8 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
         FILTER_TYPE: filter type [string]
         FILTER_ORDER: filter order [integer]
         FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
-        rij: array coordinates
+        lat_list: array latitude coordinates [list]
+        lon_list: array longitude coordinates [list]
         WINLEN_list: list of window length for narrow-band processing
         WINOVER: window overlap [float]
         ALPHA: Use ordinary least-squares processing (not trimmed least-squares)
@@ -157,7 +159,7 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
         sig_tau_float: sigma tau results for that frequency band
         num_compute: number of windows computed for that narrow frquency band
         w_temp: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
-        h_temp: The frequency response, as complex numbers. [ndarray]   
+        h_temp: The frequency response, as complex numbers. [ndarray]
     '''
     if FREQ_BAND_TYPE == '2_octave_over':
         tempfmin = freqlist[ii]
@@ -177,8 +179,8 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
     if temp_BT < 5.0:
         print('CAUTION: BT < 5! Band between ' + str(tempfmin) + ' Hz and ' + str(tempfmax) + ' Hz has BT = ' + str(temp_BT))
 
-    # Run Array Processing 
-    vel, baz, t, mdccm, stdict, sig_tau = ltsva(tempst_filter, rij, WINLEN_list[ii], WINOVER, ALPHA)
+    # Run Array Processing
+    vel, baz, t, mdccm, stdict, sig_tau, vel_uncert, baz_uncert = ltsva(tempst_filter, lat_list, lon_list, WINLEN_list[ii], WINOVER, ALPHA)
 
 
     # Convert array processing output to numpy array of floats
@@ -218,16 +220,17 @@ def narrow_band_loop(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TY
 
 
 
-def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBANDS, w, h, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
+def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, lat_list, lon_list, NBANDS, w, h, freqlist, FREQ_BAND_TYPE, freq_resp_list, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE):
     from joblib import Parallel, delayed
     '''
     Runs narrow-band least-squares processing in parallel
     Args:
         WINLEN_list: list of window length for narrow-band processing
         WINOVER: window overlap [float]
-        ALPHA: Use ordinary least-squares or LTS processing 
+        ALPHA: Use ordinary least-squares or LTS processing
         st: array data (:class:`~obspy.core.stream.Stream`)
-        rij: array coordinates
+        lat_list: array latitude list [list]
+        lon_list: array longitude list [list]
         NBANDS: number of frequency bands [integer]
         w: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
         h: The frequency response, as complex numbers. [ndarray]
@@ -238,15 +241,15 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
         FILTER_ORDER: filter order [integer]
         FILTER_RIPPLE: filter ripple (if Chebyshev I filter) [float]
     Returns:
-        vel_array: numpy array with trace velocity results 
-        baz_array: numpy array with backazimuth results 
-        mdccm_array: numpy array with mdccm results 
-        t_array: numpy array with times for array processing results 
+        vel_array: numpy array with trace velocity results
+        baz_array: numpy array with backazimuth results
+        mdccm_array: numpy array with mdccm results
+        t_array: numpy array with times for array processing results
         stdict_all: dictionary with dropped elements for LTS [dictionary]
-        sig_tau_array: numpy array of sigma tau values for array processing results 
+        sig_tau_array: numpy array of sigma tau values for array processing results
         num_compute_list: length for processing reults in each frequency band
         w_array: The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample) [ndarray]
-        h_array: The frequency response, as complex numbers. [ndarray]  
+        h_array: The frequency response, as complex numbers. [ndarray]
     '''
 
 
@@ -260,7 +263,7 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
     nits = len(its)-1
     Fs = st[0].stats.sampling_rate
     vector_len = int(nits/Fs)
-    
+
     # Initialize arrays to be as large as the number of windows for the highest frequency band
     vel_array = np.zeros((NBANDS,vector_len))
     baz_array = np.zeros((NBANDS,vector_len))
@@ -274,12 +277,12 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
     h_array = np.zeros((NBANDS,len(h)), dtype = 'complex_')
 
     num_compute_list = []
-    
+
     ########################################
     ### Run Narrow-Band Array Processing ###
     ########################################
     # Parallel Processing
-    results = Parallel(n_jobs=-1)(delayed(narrow_band_loop)(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE, rij, WINLEN_list, WINOVER, ALPHA, vector_len) for ii in range(NBANDS))
+    results = Parallel(n_jobs=-1)(delayed(narrow_band_loop)(ii, freqlist, FREQ_BAND_TYPE, freq_resp_list, st, FILTER_TYPE, FILTER_ORDER, FILTER_RIPPLE, lat_list, lon_list, WINLEN_list, WINOVER, ALPHA, vector_len) for ii in range(NBANDS))
 
 
     ###################################################################
@@ -318,6 +321,6 @@ def narrow_band_least_squares_parallel(WINLEN_list, WINOVER, ALPHA, st, rij, NBA
 
 
     return vel_array, baz_array, mdccm_array, t_array, stdict_all, sig_tau_array, num_compute_list, w_array, h_array
-    
+
 
 
