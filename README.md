@@ -1,8 +1,9 @@
 # narrow_band_least_squares
-Uses the open source [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing) in multiple sequential narrow frequency bands.
+Uses the open source [uafgeotools/lts_array](https://github.com/uafgeotools/lts_array) in multiple sequential narrow frequency bands.
  
 ## Dependencies
-- Follow the instructions to install [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing), which will create the new conda environment `uafinfra`. 
+- Follow the instructions to install [uafgeotools/lts_array](https://github.com/uafgeotools/lts_array), which will create the new conda environment `uafinfra`. You can also install [uafgeotools/waveform_collection](https://github.com/uafgeotools/waveform_collection) if you would like to gather waveforms with that repository. 
+- Alternatively, you can follow the instructions to install [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing), which has [uafgeotools/lts_array](https://github.com/uafgeotools/lts_array) and [uafgeotools/waveform_collection](https://github.com/uafgeotools/waveform_collection) as dependencies. Note: This route is currently having a version issue, so we recommend the previous method for now until it is fixed.
 - [Obspy](https://docs.obspy.org/) is included in this environment
 - If you would like to use the parallelized version, you must also install [joblib](https://joblib.readthedocs.io/en/latest/) in the `uafinfra` conda environment. For example, using conda:
 ```
