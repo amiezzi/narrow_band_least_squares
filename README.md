@@ -18,13 +18,14 @@ In Terminal, navigate to the directory you wish to install then download the rep
 This will create a folder named `narrow_band_least_squares`. 
 
 ## Usage
-To use the code, you will need to activate the conda environment from [uafgeotools/array_processing](https://github.com/uafgeotools/array_processing) by 
+To use the code, you will need to activate the conda environment from [uafgeotools/lts_array](https://github.com/uafgeotools/lts_array) by 
 ```
 >> conda activate uafinfra
 ```
 
 Run an example script by 
 ```
+>> cd narrow_band_least_squares
 >> python example.py
 ```
 
@@ -39,5 +40,5 @@ Bishop, J. W., Fee, D., and Szuberla, C. A. L. (2020).  Improved infrasound arra
 
 
 ## Contact Information
-For any questions, please contact Alex Iezzi (amiezzi@ucsb.edu).
+For any questions, please contact Alex Iezzi (amiezzi@alaska.edu).
 
