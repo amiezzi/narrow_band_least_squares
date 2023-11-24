@@ -1,0 +1,6 @@
+[submodule "lts_array"]
+	path = lts_array
+	url = https://github.com/uafgeotools/lts_array.git
+[submodule "waveform_collection"]
+	path = waveform_collection
+	url = https://github.com/uafgeotools/waveform_collection.git

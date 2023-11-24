@@ -10,19 +10,25 @@
 ### Imports ###
 ###############
 import os
+import sys
+sys.path.append('./lts_array/')
+sys.path.append('./waveform_collection/')
 from waveform_collection import gather_waveforms
+from lts_array import ltsva
+from narrow_band_least_squares import narrow_band_least_squares
+from helpers import get_freqlist, get_winlenlist, filter_data, get_rij
+from plotting import broadband_filter_response_plot, broadband_plot, narrow_band_processing_parameters_plot, narrow_band_plot, narrow_band_stau_plot, narrow_band_lts_plot, narrow_band_lts_dropped_station_plot
+
 from obspy.core import UTCDateTime
 import numpy as np
 import math as math
 from scipy import signal
 import matplotlib.pyplot as plt
-from array_processing.algorithms.helpers import getrij
-from lts_array import ltsva
-from narrow_band_least_squares import narrow_band_least_squares
-from helpers import get_freqlist, get_winlenlist, filter_data
-from plotting import broadband_filter_response_plot, broadband_plot, narrow_band_processing_parameters_plot, narrow_band_plot, narrow_band_stau_plot, narrow_band_lts_plot, narrow_band_lts_dropped_station_plot
 
 
+import inspect
+print(os.path.abspath(inspect.getfile(gather_waveforms)))
+print(os.path.abspath(inspect.getfile(ltsva)))
 
 ##############################################################################
 ##################
@@ -59,6 +65,7 @@ WINLEN_X = 30                   # window length for band X (highest frequency) [
 ### Array processing ###
 ALPHA = 1.0                 # Use ordinary least-squares processing (not trimmed least-squares)
 MDCCM_THRESH = 0.6          # Threshold value of MdCCM for plotting; Must be between 0 and 1
+PLOT_ARRAY_COORDINATES = False
 
 ### Figure Save Options ###
 file_type = '.png'                          # file save type
@@ -88,7 +95,8 @@ lonlist = [tr.stats.longitude for tr in st]
 
 ### Array Geometry ###
 # Convert array coordinates to array processing geometry
-rij = getrij(latlist, lonlist)
+nchans = len(st)
+rij = get_rij(latlist, lonlist, nchans)
 
 
 ##################################################################################
@@ -98,7 +106,7 @@ rij = getrij(latlist, lonlist)
 
 ### Run broadband least-squares ###
 stf_broad, Fs, sos = filter_data(st, FILTER_TYPE, FMIN, FMAX, FILTER_ORDER, FILTER_RIPPLE)
-vel_broad, baz_broad, t_broad, mdccm_broad, stdict_broad, sig_tau_broad, vel_uncert_broad, baz_uncert_broad = ltsva(stf_broad, latlist, lonlist, WINLEN, WINOVER, ALPHA)
+vel_broad, baz_broad, t_broad, mdccm_broad, stdict_broad, sig_tau_broad, vel_uncert_broad, baz_uncert_broad = ltsva(stf_broad, latlist, lonlist, WINLEN, WINOVER, ALPHA, PLOT_ARRAY_COORDINATES)
 
 ### Plot broadband array processing results ###
 fig = broadband_plot(stf_broad, vel_broad, baz_broad, mdccm_broad, t_broad, MDCCM_THRESH, ALPHA, stdict_broad, sig_tau_broad)

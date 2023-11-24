@@ -1,6 +1,7 @@
 import numpy as np
 import math as math
 from scipy import signal 
+from obspy.geodetics.base import calc_vincenty_inverse
 
 
 
@@ -232,3 +233,52 @@ def read_txtfile(save_dir, fname):
         t_array[ii,:temp_len] = t_list[temp_start_idx:temp_end_idx]
 
     return vel_array, baz_array, mdccm_array, t_array, freqlist, num_compute_list, nbands, FMIN, FMAX
+
+
+
+def get_rij(latlist, lonlist, nchans):
+    """ 
+    Calculate element locations (r_ij) from latitude and longitude.
+
+    Return the projected geographic positions
+    in X-Y (Cartesian) coordinates. Points are calculated
+    with the Vincenty inverse and will have a zero-mean.
+
+    Args:
+        latlist (list): A list of latitude points.
+        lonlist (list): A list of longitude points.
+
+    Returns:
+        (array):
+        ``rij``: A numpy array with the first row corresponding to
+        cartesian "X" - coordinates and the second row
+        corresponding to cartesian "Y" - coordinates.
+
+    Modified from lts_array by Jordan Bishop
+
+    """
+
+    # Check that the lat-lon arrays are the same size.
+    if (len(latlist) != nchans) or (len(lonlist) != nchans):
+        raise ValueError('Mismatch between the number of stream channels and the latitude or longitude list length.') # noqa
+
+    # Pre-allocate "x" and "y" arrays.
+    xnew = np.zeros((nchans, ))
+    ynew = np.zeros((nchans, ))
+
+    for jj in range(1, nchans):
+        # Obspy defaults to the WGS84 ellipsoid.
+        delta, az, _ = calc_vincenty_inverse(
+            latlist[0], lonlist[0], latlist[jj], lonlist[jj])
+        # Convert azimuth to degrees from North
+        az = (450 - az) % 360
+        xnew[jj] = delta/1000 * np.cos(az*np.pi/180)
+        ynew[jj] = delta/1000 * np.sin(az*np.pi/180)
+
+    # Remove the mean.
+    xnew -= np.mean(xnew)
+    ynew -= np.mean(ynew)
+
+    rij = np.array([xnew.tolist(), ynew.tolist()])
+
+    return rij
