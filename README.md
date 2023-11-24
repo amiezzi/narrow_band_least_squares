@@ -4,7 +4,6 @@ Uses the open source [uafgeotools/lts_array](https://github.com/uafgeotools/lts_
 ## Dependencies
 - Required: [uafgeotools/lts_array](https://github.com/uafgeotools/lts_array)
 - Optional: [uafgeotools/waveform_collection](https://github.com/uafgeotools/waveform_collection) if you would like to gather waveforms with that repository. 
-- [Obspy](https://docs.obspy.org/) is included in this environment
 - These two repositories are included here as [git submodules](https://www.atlassian.com/git/tutorials/git-submodule), so a copy of them are installed in this repository.
 
 ## Installation
