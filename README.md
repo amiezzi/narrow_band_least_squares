@@ -1,4 +1,4 @@
-# narrow_band_least_squares
+# Narrow-Band Least-Squares (NB-LS)
 Uses the open source [uafgeotools/lts_array](https://github.com/uafgeotools/lts_array) in multiple sequential narrow frequency bands.
 
 ## Dependencies
