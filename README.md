@@ -2,6 +2,7 @@
 Uses the open source [uafgeotools/lts_array](https://github.com/uafgeotools/lts_array) in multiple sequential narrow frequency bands.
 
 ## Dependencies
+- [conda](https://docs.conda.io/en/latest/)
 - Required: [uafgeotools/lts_array](https://github.com/uafgeotools/lts_array)
 - Optional: [uafgeotools/waveform_collection](https://github.com/uafgeotools/waveform_collection) if you would like to gather waveforms with that repository. 
 - These two repositories are included here as [git submodules](https://www.atlassian.com/git/tutorials/git-submodule), so a copy of them are installed in this repository.
@@ -9,7 +10,7 @@ Uses the open source [uafgeotools/lts_array](https://github.com/uafgeotools/lts_
 ## Installation
 In Terminal, navigate to the directory you wish to install then download the repository by running the following:
 ```
->> git clone https://github.com/amiezzi/narrow_band_least_squares.git
+>> git clone --recurse-submodules https://github.com/amiezzi/narrow_band_least_squares.git
 ```
 This will create a folder named `narrow_band_least_squares`. 
 
